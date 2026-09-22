@@ -4,11 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
-import cloudscraper
-
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0'
-}
+from playwright.sync_api import sync_playwright # 💡 終極武器：操控真實瀏覽器的套件
 
 def extract_tags(title):
     specs = []
@@ -20,32 +16,32 @@ def extract_tags(title):
     return f" [{' | '.join(specs)}]" if specs else ""
 
 def fetch_evoasis_news():
-    target_url = "https://www.evoasis.com.tw/latestnews/list"
-    base_url = "https://www.evoasis.com.tw"
+    url = "https://www.evoasis.com.tw/latestnews/list"
     news_items = []
     
+    print("啟動 Playwright 隱形瀏覽器抓取 EVOASIS...")
     try:
-        # 第一步：嘗試用 cloudscraper 直接連線
-        scraper = cloudscraper.create_scraper()
-        response = scraper.get(target_url, timeout=10)
-        
-        # 💡 關鍵突破點：判斷是否被 GitHub IP 阻擋 (回傳 403 或包含 Cloudflare 驗證)
-        if response.status_code != 200 or 'cloudflare' in response.text.lower():
-            print("⚠️ EVOASIS 阻擋了 GitHub 的伺服器 IP，啟動 Proxy 代理跳板模式...")
-            # 第二步：使用免費代理伺服器 (allorigins) 繞過 IP 封鎖
-            proxy_url = f"https://api.allorigins.win/raw?url={target_url}"
-            response = requests.get(proxy_url, timeout=15)
+        # 💡 使用 Playwright 打開隱形的 Chromium (Chrome) 瀏覽器
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
             
-        response.encoding = 'utf-8'
-        soup = BeautifulSoup(response.text, 'html.parser')
+            # 前往網頁，並等待網路閒置 (確保 JavaScript 把新聞都載入完了)
+            page.goto(url, wait_until="networkidle", timeout=30000)
+            
+            # 取得經過瀏覽器渲染後的完整 HTML
+            html_content = page.content()
+            browser.close()
+            
+        # 接下來的解析動作跟以前一樣
+        soup = BeautifulSoup(html_content, 'html.parser')
         
         for a_tag in soup.find_all('a', href=True):
             href = a_tag['href']
             if '/latestnews/' in href.lower() and not href.lower().endswith('/list'):
                 title = a_tag.text.strip()
                 if len(title) > 5 and "read" not in title.lower():
-                    # 改用 base_url 組合，確保透過 proxy 抓取時網址依然正確
-                    full_url = urllib.parse.urljoin(base_url, href)
+                    full_url = urllib.parse.urljoin(url, href)
                     tag_string = extract_tags(title)
                     news_items.append({
                         'cpo': 'EVOASIS',
@@ -55,6 +51,7 @@ def fetch_evoasis_news():
                     })
                     
         unique_news = list({item['url']: item for item in news_items}.values())
+        print(f"成功抓到 {len(unique_news)} 筆 EVOASIS 資料！")
         return unique_news[:5]
     except Exception as e:
         print(f"EVOASIS 爬取失敗: {e}")
@@ -64,7 +61,7 @@ def fetch_upower_news():
     url = "https://www.u-power.com.tw/"
     news_items = []
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
         
