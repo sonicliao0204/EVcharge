@@ -3,161 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 台灣充電站情報儀表板</title>
-    <!-- 引入 Google Fonts 提升字體質感 -->
+    <title>⚡ 台灣充電情報站</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* 基礎設定 */
         :root {
-            --bg-color: #f3f6f9;
-            --text-main: #333333;
-            --text-muted: #888888;
+            --bg-color: #f4f7f6;
+            --text-main: #333;
             --card-bg: #ffffff;
-            --border-color: #eaeaea;
             --primary-color: #2563eb;
+            --border-color: #eaeaea;
         }
-
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        /* 頁面主容器 */
-        .dashboard {
-            width: 100%;
-            max-width: 1000px;
-            padding: 20px;
-        }
-
-        /* 頂部標題區塊 */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header .last-update {
-            font-size: 14px;
-            color: var(--text-muted);
-            background: #e2e8f0;
-            padding: 4px 12px;
-            border-radius: 20px;
-        }
-
-        /* 資料卡片與表格 */
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            overflow: hidden;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f8fafc;
-            color: #475569;
-            font-weight: 700;
-            padding: 16px 20px;
-            font-size: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover {
-            background-color: #f8fafc;
-        }
-
-        /* 標籤視覺設計 */
-        .cpo-tag {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .dashboard { width: 100%; max-width: 1000px; }
         
-        /* 依據不同 CPO 給予專屬品牌色 */
-        .cpo-evoasis { background-color: #ecfccb; color: #4d7c0f; border: 1px solid #bef264; }
-        .cpo-upower { background-color: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
-        .cpo-default { background-color: #f1f5f9; color: #475569; }
+        /* 頂部標題 */
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); }
+        .header h1 { margin: 0; font-size: 28px; color: #1e293b; }
+        .last-update { font-size: 14px; color: #888; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; }
 
-        /* 規格與優惠小標籤 */
-        .spec-tags {
-            margin-top: 6px;
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
+        /* 主導覽列 (切換情報/費率) */
+        .main-nav { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav-btn { flex: 1; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; background: #e2e8f0; color: #475569; transition: 0.3s; }
+        .nav-btn.active { background: var(--primary-color); color: white; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
 
-        .spec-tag {
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background-color: #f1f5f9;
-            color: #64748b;
-            border: 1px solid #cbd5e1;
-        }
-        
-        .spec-tag.highlight { background-color: #fef3c7; color: #b45309; border-color: #fde68a; } /* 新站/優惠專用 */
+        /* 區塊顯示控制 */
+        .section { display: none; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .section.active { display: block; }
 
-        /* 連結設計 */
-        .news-link {
-            text-decoration: none;
-            color: var(--text-main);
-            font-size: 16px;
-            font-weight: 500;
-            line-height: 1.5;
-            display: block;
-            transition: color 0.2s ease;
-        }
+        /* --- 情報區塊 CSS --- */
+        .news-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .news-table th { background: #f8fafc; padding: 14px; border-bottom: 1px solid var(--border-color); color: #475569; }
+        .news-table td { padding: 14px; border-bottom: 1px solid var(--border-color); }
+        .news-table tr:hover { background: #f8fafc; }
+        .cpo-tag { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+        .cpo-evalue { background: #ecfccb; color: #4d7c0f; border: 1px solid #bef264; }
+        .cpo-upower { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        .spec-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; margin-right: 4px; display: inline-block; margin-top: 4px;}
+        .spec-tag.highlight { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+        .news-link { text-decoration: none; color: var(--text-main); font-weight: 500; }
+        .news-link:hover { color: var(--primary-color); }
 
-        .news-link:hover {
-            color: var(--primary-color);
-        }
-        
-        .date-text {
-            color: var(--text-muted);
-            font-size: 14px;
-        }
+        /* --- 費率區塊 CSS --- */
+        .cpo-tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        .cpo-btn { padding: 8px 24px; border: 2px solid #cbd5e1; background: white; border-radius: 20px; cursor: pointer; font-weight: bold; color: #64748b; }
+        .cpo-btn.active-evalue { border-color: #4CAF50; background: #4CAF50; color: white; }
+        .cpo-btn.active-upower { border-color: #0369a1; background: #0369a1; color: white; }
 
-        /* 載入中狀態 */
-        #loading {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
-        }
+        .summary-cards { display: flex; gap: 15px; margin-bottom: 20px; text-align: center; }
+        .rate-box { flex: 1; padding: 15px; border: 3px solid; border-radius: 8px; background: white; }
+        .rate-box-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .rate-box-price { font-size: 28px; font-weight: bold; }
+        .unit { font-size: 16px; font-weight: normal; }
+
+        .rate-table { width: 100%; border-collapse: collapse; text-align: center; border: 2px solid #03A9F4; }
+        .rate-table th, .rate-table td { border: 1px solid #ccc; padding: 8px 4px; font-size: 14px; }
+        .rate-table th { background: white; color: #555; font-weight: bold; padding: 12px; }
+        .time-col { background: #e1f5fe; color: #0277bd; font-weight: bold; width: 80px; }
+
+        /* 費率表格顏色 */
+        .cell-off-peak { background: #66BB6A; color: white; font-weight: 500; }
+        .cell-peak { background: #FF7043; color: white; font-weight: 500; }
+        .cell-holiday { background: #AED581; color: #33691E; font-weight: 500; }
+        .cell-flat { background: #38bdf8; color: white; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -167,83 +74,163 @@
             <div class="last-update" id="update-time">讀取資料中...</div>
         </div>
         
-        <div class="card">
-            <table>
-                <thead>
-                    <tr>
-                        <th width="15%">營運商</th>
-                        <th width="15%">日期</th>
-                        <th width="70%">情報內容</th>
-                    </tr>
-                </thead>
+        <!-- 主導覽列 -->
+        <div class="main-nav">
+            <button class="nav-btn active" onclick="switchMainTab('news')">📡 最新情報</button>
+            <button class="nav-btn" onclick="switchMainTab('rates')">💰 各家費率總覽</button>
+        </div>
+
+        <!-- 區塊一：最新情報 -->
+        <div id="section-news" class="section active">
+            <table class="news-table">
+                <thead><tr><th width="15%">營運商</th><th width="15%">日期</th><th width="70%">情報內容</th></tr></thead>
                 <tbody id="data-body">
-                    <tr id="loading">
-                        <td colspan="3">🔄 正在載入最新情報...</td>
-                    </tr>
+                    <tr><td colspan="3" style="text-align:center; color:#888;">載入中...</td></tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- 區塊二：各家費率表 -->
+        <div id="section-rates" class="section">
+            <div class="cpo-tabs">
+                <button id="btn-evalue" class="cpo-btn active-evalue" onclick="renderRate('EVALUE')">EVALUE (時間電價)</button>
+                <button id="btn-upower" class="cpo-btn" onclick="renderRate('U-POWER')">U-POWER (單一費率)</button>
+            </div>
+
+            <!-- 費率摘要卡片 -->
+            <div class="summary-cards" id="rate-summary"></div>
+
+            <!-- 費率矩陣表格 -->
+            <div style="overflow-x: auto;">
+                <table class="rate-table" id="rate-table-ui">
+                    <thead>
+                        <tr><th class="time-col">時間</th><th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th></tr>
+                    </thead>
+                    <tbody id="rate-tbody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        // 設定 CPO 專屬的 CSS Class
-        const getCpoClass = (cpoName) => {
-            const name = cpoName.toUpperCase();
-            if(name.includes('EVOASIS')) return 'cpo-evoasis';
-            if(name.includes('U-POWER')) return 'cpo-upower';
-            return 'cpo-default';
-        };
+        // --- 1. 頁面切換邏輯 ---
+        function switchMainTab(tabName) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('section-' + tabName).classList.add('active');
+            
+            // 初次切換到費率頁面時，預設渲染 EVALUE
+            if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') {
+                renderRate('EVALUE');
+            }
+        }
 
+        // --- 2. 爬蟲資料載入邏輯 ---
+        const getCpoClass = (cpo) => cpo.includes('EVALUE') ? 'cpo-evalue' : (cpo.includes('U-POWER') ? 'cpo-upower' : '');
+        
         fetch('data.json')
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 const tbody = document.getElementById('data-body');
-                tbody.innerHTML = ''; // 清除載入中文字
+                tbody.innerHTML = '';
+                document.getElementById('update-time').innerText = '最後更新: ' + new Date().toLocaleString('zh-TW', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
                 
-                // 設定更新時間為現在
-                document.getElementById('update-time').innerText = '最後更新: ' + new Date().toLocaleString('zh-TW', {
-                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                });
-                
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 30px; color: #888;">目前尚無新情報</td></tr>';
-                    return;
-                }
+                if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">尚無情報</td></tr>';
 
                 data.forEach(item => {
-                    // 將標題與我們在 python 塞進去的中括號 [標籤] 分開處理
                     let mainTitle = item.title;
                     let tagsHtml = '';
-                    
-                    // 利用正規表達式捕捉 [標籤 | 標籤] 的內容
                     const tagMatch = item.title.match(/\[(.*?)\]/);
                     if (tagMatch) {
-                        mainTitle = item.title.replace(tagMatch[0], '').trim(); // 把標題裡的 [標籤] 拔掉
-                        const tagsList = tagMatch[1].split('|').map(t => t.trim());
-                        
-                        // 將標籤轉換為漂亮的 HTML 小方塊
-                        tagsList.forEach(tag => {
-                            const isHighlight = tag.includes('優惠') || tag.includes('新站') ? 'highlight' : '';
-                            tagsHtml += `<span class="spec-tag ${isHighlight}">${tag}</span>`;
+                        mainTitle = item.title.replace(tagMatch[0], '').trim();
+                        tagMatch[1].split('|').forEach(t => {
+                            t = t.trim();
+                            const isHighlight = t.includes('優惠') || t.includes('新站') ? 'highlight' : '';
+                            tagsHtml += `<span class="spec-tag ${isHighlight}">${t}</span>`;
                         });
                     }
-
-                    const row = `<tr>
-                        <td>
-                            <span class="cpo-tag ${getCpoClass(item.cpo)}">${item.cpo}</span>
-                        </td>
-                        <td class="date-text">${item.date}</td>
-                        <td>
-                            <a href="${item.url}" target="_blank" class="news-link">${mainTitle}</a>
-                            ${tagsHtml ? `<div class="spec-tags">${tagsHtml}</div>` : ''}
-                        </td>
+                    tbody.innerHTML += `<tr>
+                        <td><span class="cpo-tag ${getCpoClass(item.cpo)}">${item.cpo}</span></td>
+                        <td style="color:#888; font-size:14px;">${item.date}</td>
+                        <td><a href="${item.url}" target="_blank" class="news-link">${mainTitle}</a><br>${tagsHtml}</td>
                     </tr>`;
-                    tbody.innerHTML += row;
                 });
-            })
-            .catch(error => {
-                document.getElementById('data-body').innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:red;">無法取得 data.json，請確認爬蟲是否已成功執行。</td></tr>';
-            });
+            }).catch(() => document.getElementById('data-body').innerHTML = '<tr><td colspan="3" style="text-align:center;color:red;">請確認爬蟲是否已成功執行產生 data.json</td></tr>');
+
+        // --- 3. 費率表渲染邏輯 ---
+        const rateConfigs = {
+            'EVALUE': {
+                type: 'TOU', // 時間電價
+                peak: 13.5, offPeak: 6.9, holiday: 8.5,
+                peakStart: 16, peakEnd: 21
+            },
+            'U-POWER': {
+                type: 'FLAT', // 單一費率 (以會員價 9.9 為例)
+                price: 9.9
+            }
+        };
+
+        function renderRate(cpo) {
+            // 切換按鈕樣式
+            document.querySelectorAll('.cpo-btn').forEach(btn => btn.className = 'cpo-btn');
+            document.getElementById('btn-' + cpo.toLowerCase().replace('-','')).classList.add(cpo === 'EVALUE' ? 'active-evalue' : 'active-upower');
+            
+            const config = rateConfigs[cpo];
+            const summaryDiv = document.getElementById('rate-summary');
+            const tbody = document.getElementById('rate-tbody');
+            
+            // 繪製頂部摘要卡片
+            if (config.type === 'TOU') {
+                document.getElementById('rate-table-ui').style.borderColor = '#03A9F4';
+                summaryDiv.innerHTML = `
+                    <div class="rate-box" style="border-color: #4CAF50; color: #4CAF50;">
+                        <div class="rate-box-title">離峰時段</div>
+                        <div class="rate-box-price">${config.offPeak}<span class="unit">元/kWh</span></div>
+                    </div>
+                    <div class="rate-box" style="border-color: #FF5722; color: #FF5722;">
+                        <div class="rate-box-title">尖峰時段 ${config.peakStart}:00-${config.peakEnd+1}:00</div>
+                        <div class="rate-box-price">${config.peak}<span class="unit">元/kWh</span></div>
+                    </div>
+                    <div class="rate-box" style="border-color: #8BC34A; color: #8BC34A;">
+                        <div class="rate-box-title">假日時段</div>
+                        <div class="rate-box-price">${config.holiday}<span class="unit">元/kWh</span></div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('rate-table-ui').style.borderColor = '#0369a1';
+                summaryDiv.innerHTML = `
+                    <div class="rate-box" style="border-color: #0369a1; color: #0369a1;">
+                        <div class="rate-box-title">全時段單一費率 (會員價)</div>
+                        <div class="rate-box-price">${config.price}<span class="unit">元/kWh</span></div>
+                    </div>
+                `;
+            }
+
+            // 繪製 24 小時矩陣
+            tbody.innerHTML = '';
+            for (let h = 0; h < 24; h++) {
+                const timeStr = String(h).padStart(2, '0') + ':00~';
+                let rowHtml = `<tr><td class="time-col">${timeStr}</td>`;
+                
+                for (let d = 1; d <= 7; d++) {
+                    let price = '', cellClass = '';
+                    
+                    if (config.type === 'TOU') {
+                        if (d >= 6) { price = config.holiday; cellClass = 'cell-holiday'; } // 假日
+                        else if (h >= config.peakStart && h <= config.peakEnd) { price = config.peak; cellClass = 'cell-peak'; } // 尖峰
+                        else { price = config.offPeak; cellClass = 'cell-off-peak'; } // 離峰
+                    } else {
+                        // U-POWER 單一費率
+                        price = config.price; 
+                        cellClass = 'cell-flat';
+                    }
+                    rowHtml += `<td class="${cellClass}">$${price}</td>`;
+                }
+                rowHtml += `</tr>`;
+                tbody.innerHTML += rowHtml;
+            }
+        }
     </script>
 </body>
 </html>
