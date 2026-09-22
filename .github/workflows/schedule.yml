@@ -2,17 +2,20 @@ name: Daily CPO Scraper and Web Deploy
 
 on:
   schedule:
-    # 每天 UTC 0:00 執行 (等於台灣時間早上 8:00)
     - cron: '0 0 * * *'
-  # 允許我們手動點擊按鈕來測試
   workflow_dispatch:
 
-# 賦予機器人寫入檔案的權限，這樣它才能幫我們更新網頁
+# 💡 這是解決紅叉叉的關鍵：賦予機器人完整的安全發布權限
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   scrape-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: 取得專案程式碼
@@ -29,8 +32,14 @@ jobs:
       - name: 執行爬蟲，抓取最新資料
         run: python scraper.py
         
-      - name: 將結果發布為網頁 (GitHub Pages)
-        uses: peaceiris/actions-gh-pages@v3
+      - name: 設定 GitHub Pages 
+        uses: actions/configure-pages@v5
+        
+      - name: 打包網頁檔案
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          path: '.'
+          
+      - name: 發布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
