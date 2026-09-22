@@ -4,9 +4,12 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
-import cloudscraper # 💡 秘密武器：專門突破網站防火牆
+import cloudscraper
 
-# 共用標籤萃取
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0'
+}
+
 def extract_tags(title):
     specs = []
     if re.search(r'360\s*kW|360k|500\s*kW', title, re.IGNORECASE): specs.append('⚡超高速')
@@ -17,28 +20,32 @@ def extract_tags(title):
     return f" [{' | '.join(specs)}]" if specs else ""
 
 def fetch_evoasis_news():
-    url = "https://www.evoasis.com.tw/latestnews/list"
+    target_url = "https://www.evoasis.com.tw/latestnews/list"
+    base_url = "https://www.evoasis.com.tw"
     news_items = []
+    
     try:
-        # 💡 建立高階偽裝器，嘗試突破防火牆
+        # 第一步：嘗試用 cloudscraper 直接連線
         scraper = cloudscraper.create_scraper()
-        response = scraper.get(url, timeout=15)
+        response = scraper.get(target_url, timeout=10)
+        
+        # 💡 關鍵突破點：判斷是否被 GitHub IP 阻擋 (回傳 403 或包含 Cloudflare 驗證)
+        if response.status_code != 200 or 'cloudflare' in response.text.lower():
+            print("⚠️ EVOASIS 阻擋了 GitHub 的伺服器 IP，啟動 Proxy 代理跳板模式...")
+            # 第二步：使用免費代理伺服器 (allorigins) 繞過 IP 封鎖
+            proxy_url = f"https://api.allorigins.win/raw?url={target_url}"
+            response = requests.get(proxy_url, timeout=15)
+            
         response.encoding = 'utf-8'
-        
-        # 👇 抓蟲專用：印出狀態碼，看看是不是依然被擋
-        print(f"EVOASIS 伺服器回傳狀態碼: {response.status_code}")
-        
         soup = BeautifulSoup(response.text, 'html.parser')
-        links = soup.find_all('a', href=True)
-        print(f"EVOASIS 網頁解析到 {len(links)} 個連結") 
         
-        for a_tag in links:
+        for a_tag in soup.find_all('a', href=True):
             href = a_tag['href']
-            # 確保涵蓋所有大小寫情況
             if '/latestnews/' in href.lower() and not href.lower().endswith('/list'):
                 title = a_tag.text.strip()
                 if len(title) > 5 and "read" not in title.lower():
-                    full_url = urllib.parse.urljoin(url, href)
+                    # 改用 base_url 組合，確保透過 proxy 抓取時網址依然正確
+                    full_url = urllib.parse.urljoin(base_url, href)
                     tag_string = extract_tags(title)
                     news_items.append({
                         'cpo': 'EVOASIS',
@@ -57,7 +64,7 @@ def fetch_upower_news():
     url = "https://www.u-power.com.tw/"
     news_items = []
     try:
-        response = requests.get(url, timeout=15, headers={'User-Agent': 'Mozilla/5.0'})
+        response = requests.get(url, headers=HEADERS, timeout=15)
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
         
@@ -92,4 +99,4 @@ if __name__ == '__main__':
     with open('data.json', 'w', encoding='utf-8') as f:
         json.dump(all_cpo_data, f, ensure_ascii=False, indent=4)
     
-    print(f"成功！寫入 EVOASIS ({len(evoasis_data)}筆), U-POWER ({len(upower_data)}筆)")
+    print("成功！已輸出最新資料。")
