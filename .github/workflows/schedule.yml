@@ -27,7 +27,10 @@ jobs:
           python-version: '3.10'
           
       - name: 安裝必備套件
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-dep
         
       - name: 執行爬蟲，抓取最新資料
         run: python scraper.py
