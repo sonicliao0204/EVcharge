@@ -5,9 +5,9 @@ from bs4 import BeautifulSoup
 import re
 import urllib.parse
 
-# 共同的請求標頭，偽裝成真實瀏覽器
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
+    # 換一組更新的 User-Agent，避免被當成機器人擋下來
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 }
 
 def extract_tags(title):
@@ -24,16 +24,16 @@ def fetch_evoasis_news():
     news_items = []
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
-        # 💡 解決亂碼的關鍵：強制使用 utf-8 解碼
-        response.encoding = 'utf-8'
         
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # 💡 終極解法：使用 response.content 取得最原始資料，讓 BeautifulSoup 自己判斷編碼
+        soup = BeautifulSoup(response.content, 'html.parser')
         
         for a_tag in soup.find_all('a', href=True):
             href = a_tag['href']
-            if '/latestnews/' in href and href != '/latestnews/list':
+            # 加入 lower() 避免網址大小寫改變導致抓不到
+            if '/latestnews/' in href.lower() and not href.lower().endswith('/list'):
                 title = a_tag.text.strip()
-                if len(title) > 5 and "Read More" not in title:
+                if len(title) > 5 and "read" not in title.lower():
                     full_url = urllib.parse.urljoin(url, href)
                     tag_string = extract_tags(title)
                     news_items.append({
@@ -54,10 +54,9 @@ def fetch_upower_news():
     news_items = []
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
-        # 💡 解決亂碼的關鍵：強制使用 utf-8 解碼
-        response.encoding = 'utf-8'
         
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # 💡 終極解法：同樣使用 response.content
+        soup = BeautifulSoup(response.content, 'html.parser')
         
         for a_tag in soup.find_all('a', href=True):
             href = a_tag['href']
@@ -90,4 +89,4 @@ if __name__ == '__main__':
     with open('data.json', 'w', encoding='utf-8') as f:
         json.dump(all_cpo_data, f, ensure_ascii=False, indent=4)
     
-    print("成功！亂碼問題已修復。")
+    print("成功！已輸出防呆版資料。")
