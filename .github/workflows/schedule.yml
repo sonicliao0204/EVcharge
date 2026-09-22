@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: '3.10'
           
-    - name: 安裝必備套件
+      - name: 安裝必備套件
         run: pip install -r requirements.txt
         
       - name: 執行爬蟲，抓取最新資料
