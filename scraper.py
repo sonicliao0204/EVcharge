@@ -3,7 +3,7 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 import re
-import urllib.parse # 💡 新增這個官方套件，專門用來完美組合相對/絕對網址
+import urllib.parse
 
 # 共同的請求標頭，偽裝成真實瀏覽器
 HEADERS = {
@@ -11,7 +11,6 @@ HEADERS = {
 }
 
 def extract_tags(title):
-    """從標題自動判斷硬體規格與活動類型"""
     specs = []
     if re.search(r'360\s*kW|360k|500\s*kW', title, re.IGNORECASE): specs.append('⚡超高速')
     if re.search(r'CCS1', title, re.IGNORECASE): specs.append('CCS1')
@@ -25,18 +24,18 @@ def fetch_evoasis_news():
     news_items = []
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
+        # 💡 解決亂碼的關鍵：強制使用 utf-8 解碼
+        response.encoding = 'utf-8'
+        
         soup = BeautifulSoup(response.text, 'html.parser')
         
         for a_tag in soup.find_all('a', href=True):
             href = a_tag['href']
-            # 篩選出真實的新聞內頁連結
             if '/latestnews/' in href and href != '/latestnews/list':
                 title = a_tag.text.strip()
                 if len(title) > 5 and "Read More" not in title:
-                    # 💡 使用 urljoin 自動且完美地組合出網址
                     full_url = urllib.parse.urljoin(url, href)
                     tag_string = extract_tags(title)
-                    
                     news_items.append({
                         'cpo': 'EVOASIS',
                         'date': datetime.date.today().strftime('%Y-%m-%d'),
@@ -55,6 +54,9 @@ def fetch_upower_news():
     news_items = []
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
+        # 💡 解決亂碼的關鍵：強制使用 utf-8 解碼
+        response.encoding = 'utf-8'
+        
         soup = BeautifulSoup(response.text, 'html.parser')
         
         for a_tag in soup.find_all('a', href=True):
@@ -63,10 +65,8 @@ def fetch_upower_news():
             
             if title and len(title) > 5:
                 if 'news' in href.lower() or 'event' in href.lower() or '公告' in title or '啟用' in title or '活動' in title:
-                    # 💡 同樣使用 urljoin 處理 U-POWER 的相對網址
                     full_url = urllib.parse.urljoin(url, href)
                     tag_string = extract_tags(title)
-                    
                     news_items.append({
                         'cpo': 'U-POWER',
                         'date': datetime.date.today().strftime('%Y-%m-%d'),
@@ -90,4 +90,4 @@ if __name__ == '__main__':
     with open('data.json', 'w', encoding='utf-8') as f:
         json.dump(all_cpo_data, f, ensure_ascii=False, indent=4)
     
-    print("成功！請查看 data.json 中的網址是否已修復為正確的絕對路徑。")
+    print("成功！亂碼問題已修復。")
