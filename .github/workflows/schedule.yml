@@ -1,0 +1,36 @@
+name: Daily CPO Scraper and Web Deploy
+
+on:
+  schedule:
+    # 每天 UTC 0:00 執行 (等於台灣時間早上 8:00)
+    - cron: '0 0 * * *'
+  # 允許我們手動點擊按鈕來測試
+  workflow_dispatch:
+
+# 賦予機器人寫入檔案的權限，這樣它才能幫我們更新網頁
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取得專案程式碼
+        uses: actions/checkout@v4
+      
+      - name: 準備 Python 環境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: 安裝必備套件
+        run: pip install -r requirements.txt
+        
+      - name: 執行爬蟲，抓取最新資料
+        run: python scraper.py
+        
+      - name: 將結果發布為網頁 (GitHub Pages)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
