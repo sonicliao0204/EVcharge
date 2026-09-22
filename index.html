@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣充電站每日情報</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #f9f9f9; }
+        .container { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        .tag { background: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        a { text-decoration: none; color: #007bff; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ 台灣充電站每日情報</h1>
+        <p style="text-align: right; color: #666; font-size: 14px;">最後更新時間：<span id="update-time">載入中...</span></p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>營運商 (CPO)</th>
+                    <th>發布日期</th>
+                    <th>情報內容</th>
+                </tr>
+            </thead>
+            <tbody id="data-body">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('data-body');
+                document.getElementById('update-time').innerText = new Date().toLocaleString('zh-TW');
+                
+                data.forEach(item => {
+                    const row = `<tr>
+                        <td><span class="tag">${item.cpo}</span></td>
+                        <td>${item.date}</td>
+                        <td><a href="${item.url}" target="_blank">${item.title}</a></td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+            })
+            .catch(error => {
+                document.getElementById('data-body').innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">目前尚無資料，等待爬蟲更新。</td></tr>';
+            });
+    </script>
+</body>
+</html>
