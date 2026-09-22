@@ -10,6 +10,7 @@ HEADERS = {
 }
 
 def extract_tags(title):
+    """自動標記硬體規格與活動優惠"""
     specs = []
     if re.search(r'360\s*kW|360k|500\s*kW|480\s*kW', title, re.IGNORECASE): specs.append('⚡超高速')
     if re.search(r'CCS1', title, re.IGNORECASE): specs.append('CCS1')
@@ -18,12 +19,19 @@ def extract_tags(title):
     if '上線' in title or '啟用' in title or '營運' in title or '新站' in title: specs.append('🎉新站情報')
     return f" [{' | '.join(specs)}]" if specs else ""
 
-def fetch_evalue_news():
-    url = "https://www.evalue.com.tw/"
+def fetch_cpo_news(base_url, cpo_name, extra_keywords=None):
+    """
+    💡 升級版：通用型爬蟲引擎
+    只要給予網址與名稱，自動掃描網頁內的「最新消息、公告、活動」連結
+    """
     news_items = []
+    # 預設抓取關鍵字 (網址包含 news/event，或標題包含活動/公告)
+    keywords = ['news', 'event', '活動', '公告', '啟用', '上線']
+    if extra_keywords:
+        keywords.extend(extra_keywords)
+        
     try:
-        # EVALUE 通常將新聞放在 /news/ 路徑下
-        res = requests.get(urllib.parse.urljoin(url, "news/"), headers=HEADERS, timeout=15)
+        res = requests.get(base_url, headers=HEADERS, timeout=15)
         res.encoding = 'utf-8'
         soup = BeautifulSoup(res.text, 'html.parser')
         
@@ -31,82 +39,38 @@ def fetch_evalue_news():
             href = a_tag['href']
             title = a_tag.text.strip()
             
-            # 確保抓取的是新聞內頁
-            if title and len(title) > 4 and 'news' in href.lower():
-                full_url = urllib.parse.urljoin(url, href)
-                tag_string = extract_tags(title)
-                news_items.append({
-                    'cpo': 'EVALUE',
-                    'date': datetime.date.today().strftime('%Y-%m-%d'),
-                    'title': f"{title}{tag_string}",
-                    'url': full_url
-                })
-        return list({item['url']: item for item in news_items}.values())[:5]
-    except Exception as e:
-        print(f"EVALUE 爬取失敗: {e}")
-        return []
-
-def fetch_cblok_news():
-    url = "https://www.cblok.biz/news"
-    news_items = []
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        res.encoding = 'utf-8'
-        soup = BeautifulSoup(res.text, 'html.parser')
-        
-        for a_tag in soup.find_all('a', href=True):
-            href = a_tag['href']
-            title = a_tag.text.strip()
-            
-            if title and len(title) > 4:
-                # 篩選公告或新聞關鍵字
-                if 'news' in href.lower() or 'article' in href.lower() or '公告' in title or '活動' in title:
-                    full_url = urllib.parse.urljoin(url, href)
+            # 過濾無效字串與選單按鈕
+            if title and len(title) > 4 and 'more' not in title.lower():
+                # 檢查是否符合新聞特徵
+                if any(kw in href.lower() or kw in title for kw in keywords):
+                    full_url = urllib.parse.urljoin(base_url, href)
                     tag_string = extract_tags(title)
                     news_items.append({
-                        'cpo': 'iCharging',
+                        'cpo': cpo_name,
                         'date': datetime.date.today().strftime('%Y-%m-%d'),
                         'title': f"{title}{tag_string}",
                         'url': full_url
                     })
-        return list({item['url']: item for item in news_items}.values())[:5]
+                    
+        # 過濾重複網址並回傳前 5 筆
+        unique_news = list({item['url']: item for item in news_items}.values())
+        return unique_news[:5]
     except Exception as e:
-        print(f"CBLOK 爬取失敗: {e}")
-        return []
-
-def fetch_upower_news():
-    url = "https://www.u-power.com.tw/"
-    news_items = []
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        res.encoding = 'utf-8'
-        soup = BeautifulSoup(res.text, 'html.parser')
-        
-        for a_tag in soup.find_all('a', href=True):
-            href = a_tag['href']
-            title = a_tag.text.strip()
-            
-            if title and len(title) > 5:
-                if 'news' in href.lower() or 'event' in href.lower() or '公告' in title or '啟用' in title or '活動' in title:
-                    full_url = urllib.parse.urljoin(url, href)
-                    tag_string = extract_tags(title)
-                    news_items.append({
-                        'cpo': 'U-POWER',
-                        'date': datetime.date.today().strftime('%Y-%m-%d'),
-                        'title': f"{title}{tag_string}",
-                        'url': full_url
-                    })
-        return list({item['url']: item for item in news_items}.values())[:5]
-    except Exception as e:
-        print(f"U-POWER 爬取失敗: {e}")
+        print(f"[{cpo_name}] 爬取失敗: {e}")
         return []
 
 if __name__ == '__main__':
-    print("開始執行最新 CPO 陣列爬蟲任務...")
-    # 將三家資料合併
-    all_cpo_data = fetch_evalue_news() + fetch_cblok_news() + fetch_upower_news()
+    print("🚀 啟動 5 大 CPO 聯合爬蟲任務...")
+    
+    # 透過通用引擎，一行程式碼就能輕鬆擴充一家 CPO！
+    all_data = []
+    all_data += fetch_cpo_news("https://www.evalue.com.tw/news/", "EVALUE", ['detail'])
+    all_data += fetch_cpo_news("https://www.cblok.biz/news", "iCharging")
+    all_data += fetch_cpo_news("https://www.u-power.com.tw/", "U-POWER")
+    all_data += fetch_cpo_news("https://www.tail.com.tw/", "TAIL 特爾電力")
+    all_data += fetch_cpo_news("https://www.yes-energy.com.tw/", "YES!來電")
     
     with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(all_cpo_data, f, ensure_ascii=False, indent=4)
+        json.dump(all_data, f, ensure_ascii=False, indent=4)
     
-    print(f"成功！共抓取 {len(all_cpo_data)} 筆最新資料。")
+    print(f"✅ 成功！共抓取 {len(all_data)} 筆最新資料並寫入 data.json。")
