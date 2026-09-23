@@ -1,1 +1,14 @@
-
+{
+  "id": "demo-001",
+  "name": "竹科示範站",
+  "operator": "EVALUE",
+  "city": "新竹市",
+  "lat": 24.7758,
+  "lng": 120.9937,
+  "type": "DC",
+  "power_kw": 180,
+  "ports": 4,
+  "status": "online",
+  "price": 6.9,
+  "verified": false
+}
