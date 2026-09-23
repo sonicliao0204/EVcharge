@@ -47,7 +47,10 @@
         .spec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
         .spec-tag { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: #f1f5f9; color: var(--text-muted); font-weight: 600;}
         .spec-tag.highlight { background: #fee2e2; color: #b91c1c; }
+        .spec-tag.policy { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; } /* 🆕 政策法規專屬視覺 */
 
+        /* 🆕 加入官方機構專屬標籤 */
+        .cpo-gov { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; } 
         .cpo-fet { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .cpo-evalue { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
         .cpo-upower { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
@@ -182,7 +185,6 @@
         </div>
     </div>
 
-    <!-- 內置所有腳本邏輯，自動讀取 data 資料夾 -->
     <script>
         let trendChartInstance = null;
         let cpoPricingData = {};
@@ -205,6 +207,8 @@
 
         const getCpoClass = (cpo) => {
             const lower = cpo.toLowerCase();
+            // 🆕 加入政府機構的專屬視覺辨識
+            if(lower.includes('台電') || lower.includes('經濟部') || lower.includes('能源署')) return 'cpo-gov';
             if(lower.includes('遠傳') || lower.includes('fet')) return 'cpo-fet';
             if(lower.includes('evalue')) return 'cpo-evalue';
             if(lower.includes('icharging') || lower.includes('cblok')) return 'cpo-icharging';
@@ -215,13 +219,10 @@
         };
 
         function fetchMarketNews() {
-            // 嘗試讀取 V2.2 模組化資料
             fetch('data/market.json')
                 .then(res => res.json())
-                .then(data => {
-                    populateNews(data);
-                }).catch(() => {
-                    // 若資料夾尚未生成，則退回讀取舊版資料，避免畫面空白
+                .then(data => populateNews(data))
+                .catch(() => {
                     fetch('data.json').then(res => res.json()).then(data => populateNews(data)).catch(e => console.log(e));
                 });
         }
@@ -241,8 +242,10 @@
                 if (tagMatch) {
                     mainTitle = item.title.replace(tagMatch[0], '').trim();
                     tagMatch[1].split('|').forEach(t => {
-                        const isHighlight = t.includes('優惠') || t.includes('新站') ? 'highlight' : '';
-                        tagsHtml += `<span class="spec-tag ${isHighlight}">${t.trim()}</span>`;
+                        let cssClass = 'spec-tag';
+                        if (t.includes('優惠') || t.includes('新站')) cssClass += ' highlight';
+                        if (t.includes('政策') || t.includes('法規')) cssClass += ' policy'; // 🆕 政策標籤上色
+                        tagsHtml += `<span class="${cssClass}">${t.trim()}</span>`;
                     });
                 }
                 container.innerHTML += `
