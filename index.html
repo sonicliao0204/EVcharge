@@ -84,6 +84,14 @@
         .cell-peak { background: #fff7ed; color: #ea580c; font-weight: 600; }
         .cell-holiday { background: #fefce8; color: #ca8a04; font-weight: 600; }
         .cell-flat { background: #f0f9ff; color: #0284c7; font-weight: 600; }
+        
+        /* Tech KB Styles */
+        .kb-card { background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; transition: 0.2s; }
+        .kb-card:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+        .kb-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .kb-badge { color: white; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; }
+        .kb-title { font-weight: 700; font-size: 16px; color: var(--text-main); }
+        .kb-solution { font-size: 14px; color: var(--text-muted); line-height: 1.6; padding: 12px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
@@ -99,6 +107,7 @@
             <button class="nav-btn" onclick="switchMainTab('compare')">🔥 競品定價分析</button>
             <button class="nav-btn" onclick="switchMainTab('trend')">📈 量化趨勢分析</button>
             <button class="nav-btn" onclick="switchMainTab('rates')">💰 各家詳細費率</button>
+            <button class="nav-btn" onclick="switchMainTab('kb')">🛠️ 技術知識庫</button> <!-- 🆕 新增 KB 頁籤 -->
         </div>
 
         <div id="section-overview" class="section active">
@@ -182,6 +191,14 @@
                 </table>
             </div>
         </div>
+
+        <!-- 🆕 新增 KB 區塊 -->
+        <div id="section-kb" class="section">
+            <h3 style="margin-top:0; margin-bottom: 20px; font-size: 18px; color: var(--text-main);">技術與異常排解知識庫 (預備 AI 檢索)</h3>
+            <div id="kb-container">
+                <div style="text-align:center; color:#888; padding: 20px;">載入技術文檔中...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -191,7 +208,8 @@
         document.addEventListener("DOMContentLoaded", () => {
             fetchMarketNews();
             fetchPricingData();
-            fetchOperationalData(); // 🆕 啟動營運資料載入
+            fetchOperationalData();
+            fetchTechKB(); // 🆕 載入知識庫
         });
 
         function switchMainTab(tabName) {
@@ -293,6 +311,29 @@
                     }
                 })
                 .catch(() => console.log('等待營運資料生成...'));
+        }
+
+        // 🆕 知識庫資料渲染邏輯
+        function fetchTechKB() {
+            fetch('data/tech_kb.json')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('kb-container');
+                    container.innerHTML = '';
+                    data.forEach(item => {
+                        let catColor = item.category === 'OCPP' ? '#0ea5e9' : (item.category === 'ISO 15118' ? '#8b5cf6' : '#f59e0b');
+                        container.innerHTML += `
+                            <div class="kb-card">
+                                <div class="kb-header">
+                                    <span class="kb-badge" style="background: ${catColor};">${item.category}</span>
+                                    <span class="kb-title">${item.issue}</span>
+                                </div>
+                                <div class="kb-solution">💡 <strong>處置建議：</strong>${item.solution}</div>
+                            </div>
+                        `;
+                    });
+                })
+                .catch(() => document.getElementById('kb-container').innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">等待資料庫建立中...</div>');
         }
 
         function getPriceAtHour(cpo, hour, isWeekend) {
