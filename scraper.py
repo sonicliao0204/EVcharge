@@ -47,12 +47,24 @@ def fetch_cpo_news(base_url, cpo_name, extra_keywords=None):
         print(f"[{cpo_name}] 爬取失敗: {e}")
         return []
 
-def update_history_data():
-    """自動維護與更新歷史時序資料庫"""
-    history_file = 'history.json'
+def generate_pricing_data(data_dir):
+    """生成靜態費率設定檔 pricing.json"""
+    pricing_data = {
+        'FET': { 'type': 'TOU', 'peak': 10.9, 'offPeak': 6.8, 'holiday': 7.9, 'peakStart': 16, 'peakEnd': 21, 'color': '#ef4444' },
+        'EVALUE': { 'type': 'TOU', 'peak': 13.5, 'offPeak': 6.9, 'holiday': 8.5, 'peakStart': 16, 'peakEnd': 21, 'color': '#4CAF50' },
+        'iCharging': { 'type': 'TOU', 'peak': 12.0, 'offPeak': 6.5, 'holiday': 6.5, 'peakStart': 18, 'peakEnd': 21, 'color': '#ea580c' },
+        'TAIL': { 'type': 'TOU', 'peak': 11.9, 'offPeak': 8.9, 'holiday': 8.9, 'peakStart': 16, 'peakEnd': 21, 'color': '#0891b2' },
+        'U-POWER': { 'type': 'FLAT', 'price': 9.9, 'color': '#0369a1' },
+        'YES': { 'type': 'FLAT', 'price': 9.5, 'color': '#ca8a04' }
+    }
+    with open(os.path.join(data_dir, 'pricing.json'), 'w', encoding='utf-8') as f:
+        json.dump(pricing_data, f, ensure_ascii=False, indent=4)
+
+def update_history_data(data_dir):
+    """生成時序趨勢 price_history.json"""
+    history_file = os.path.join(data_dir, 'price_history.json')
     current_month = datetime.date.today().strftime('%Y-%m')
     
-    # 預設的基礎歷史資料
     history_data = {
         "labels": ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'],
         "datasets": {
@@ -63,15 +75,12 @@ def update_history_data():
         }
     }
 
-    # 如果檔案已存在，則讀取舊資料
     if os.path.exists(history_file):
         try:
             with open(history_file, 'r', encoding='utf-8') as f:
                 history_data = json.load(f)
-        except:
-            pass
+        except: pass
 
-    # 若今天所在的月份還沒被記錄，就自動往後推算新增一筆 (這裡暫用模擬增長，未來可替換為真實 API 抓取量)
     if current_month not in history_data['labels']:
         history_data['labels'].append(current_month)
         history_data['datasets']['FET'].append(history_data['datasets']['FET'][-1] + 3)
@@ -81,12 +90,14 @@ def update_history_data():
 
     with open(history_file, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, ensure_ascii=False, indent=4)
-    print(f"✅ 歷史趨勢資料庫 {history_file} 更新完成！")
 
 if __name__ == '__main__':
-    print("🚀 啟動情報與時序資料聯合爬蟲任務...")
+    print("🚀 啟動 V2 架構聯合爬蟲任務...")
+    data_dir = 'data'
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
     
-    # 1. 抓取最新動態情報
+    # 1. 抓取動態情報寫入 market.json
     all_data = []
     all_data += fetch_cpo_news("https://www.evalue.com.tw/news/", "EVALUE", ['detail'])
     all_data += fetch_cpo_news("https://www.cblok.biz/news", "iCharging")
@@ -94,8 +105,12 @@ if __name__ == '__main__':
     all_data += fetch_cpo_news("https://www.tail.com.tw/", "TAIL 特爾電力")
     all_data += fetch_cpo_news("https://www.yes-energy.com.tw/", "YES!來電")
     
-    with open('data.json', 'w', encoding='utf-8') as f:
+    with open(os.path.join(data_dir, 'market.json'), 'w', encoding='utf-8') as f:
         json.dump(all_data, f, ensure_ascii=False, indent=4)
         
-    # 2. 更新歷史時序資料庫
-    update_history_data()
+    # 2. 建立靜態費率設定
+    generate_pricing_data(data_dir)
+    
+    # 3. 更新歷史時序資料庫
+    update_history_data(data_dir)
+    print("✅ V2 資料集生成完成！")
