@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 台灣充電情報站</title>
+    <title>⚡ 台灣充電情報戰情室</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root { --bg-color: #f4f7f6; --text-main: #333; --card-bg: #ffffff; --primary-color: #2563eb; --border-color: #eaeaea; }
         body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .dashboard { width: 100%; max-width: 1000px; }
+        .dashboard { width: 100%; max-width: 1100px; }
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); }
         .header h1 { margin: 0; font-size: 28px; color: #1e293b; display: flex; align-items: center; gap: 8px;}
         .last-update { font-size: 14px; color: #888; background: #e2e8f0; padding: 6px 14px; border-radius: 20px; font-weight: 500;}
         
-        /* 導覽列 */
         .main-nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;}
         .nav-btn { flex: 1; min-width: 150px; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; background: #e2e8f0; color: #475569; transition: 0.3s; }
         .nav-btn.active { background: var(--primary-color); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
         .section { display: none; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .section.active { display: block; }
 
-        /* --- 1. 情報區塊 (現代化卡片設計) --- */
+        /* 情報卡片 */
         .news-list { display: flex; flex-direction: column; gap: 15px; }
-        .news-card { display: flex; align-items: center; gap: 15px; padding: 16px; border: 1px solid var(--border-color); border-radius: 10px; transition: transform 0.2s, box-shadow 0.2s; background: #fff; }
+        .news-card { display: flex; align-items: center; gap: 15px; padding: 16px; border: 1px solid var(--border-color); border-radius: 10px; transition: transform 0.2s; background: #fff; }
         .news-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); border-color: #cbd5e1; }
         .news-cpo { flex-shrink: 0; width: 100px; text-align: center; padding: 8px 0; border-radius: 8px; font-weight: bold; font-size: 13px; }
         .news-content { flex-grow: 1; }
@@ -30,7 +29,8 @@
         .news-link:hover { color: var(--primary-color); }
         .news-date { flex-shrink: 0; color: #94a3b8; font-size: 13px; width: 85px; text-align: right; }
         
-        /* CPO 品牌色 */
+        /* 品牌色 */
+        .cpo-fet { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; } /* 遠傳紅 */
         .cpo-evalue { background: #ecfccb; color: #4d7c0f; border: 1px solid #bef264; }
         .cpo-upower { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
         .cpo-icharging { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
@@ -42,7 +42,7 @@
         .spec-tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: 500;}
         .spec-tag.highlight { background: #fef3c7; color: #b45309; }
 
-        /* --- 2. 費率與比價共用 UI --- */
+        /* 費率 UI */
         .cpo-tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap; }
         .cpo-btn { padding: 10px 20px; border: 2px solid #cbd5e1; background: white; border-radius: 25px; cursor: pointer; font-weight: bold; color: #64748b; font-size: 14px; transition: 0.2s;}
         
@@ -52,26 +52,29 @@
         .rate-box-price { font-size: 28px; font-weight: bold; }
         .unit { font-size: 16px; font-weight: normal; }
 
-        .data-table { width: 100%; border-collapse: collapse; text-align: center; border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
-        .data-table th, .data-table td { border: 1px solid #e2e8f0; padding: 10px 6px; font-size: 14px; }
+        /* 比較表格專屬 */
+        .data-table { width: 100%; border-collapse: collapse; text-align: center; border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; white-space: nowrap; }
+        .data-table th, .data-table td { border: 1px solid #e2e8f0; padding: 10px 8px; font-size: 14px; }
         .data-table th { background: #f8fafc; color: #475569; font-weight: bold; padding: 14px; }
-        .time-col { background: #f1f5f9 !important; color: #334155; font-weight: bold; width: 80px; }
+        .time-col { background: #f1f5f9 !important; color: #334155; font-weight: bold; width: 70px; }
+        
+        .col-fet { background: #fef2f2 !important; font-weight: bold; border-left: 2px solid #ef4444 !important; border-right: 2px solid #ef4444 !important; }
+        .cell-win { color: #16a34a; font-weight: 900; }
+        .cell-tie { color: #2563eb; font-weight: 900; }
+        .cell-lose { color: #dc2626; font-weight: 900; }
 
         .cell-off-peak { background: #86efac; color: #14532d; font-weight: 500; }
         .cell-peak { background: #fdba74; color: #7c2d12; font-weight: 500; }
         .cell-holiday { background: #d9f99d; color: #3f6212; font-weight: 500; }
         .cell-flat { background: #bae6fd; color: #0c4a6e; font-weight: 500; }
 
-        /* 🔥 比價專用高光樣式 */
-        .cell-cheapest { background: #fef08a !important; color: #a16207 !important; font-weight: 900 !important; font-size: 16px !important; border: 2px solid #eab308 !important; box-shadow: inset 0 0 8px rgba(234,179,8,0.3);}
         .toggle-group { display: flex; justify-content: center; margin-bottom: 20px; gap: 10px; }
         .toggle-btn { padding: 10px 30px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; border: 2px solid #cbd5e1; background: white; color: #64748b; }
         .toggle-btn.active { background: #334155; color: white; border-color: #334155; }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
             .news-card { flex-direction: column; align-items: flex-start; gap: 10px;}
             .news-date { text-align: left; width: 100%; }
-            .cpo-tabs, .summary-cards { flex-direction: column; }
         }
     </style>
 </head>
@@ -84,36 +87,38 @@
         
         <div class="main-nav">
             <button class="nav-btn active" onclick="switchMainTab('news')">📡 動態情報牆</button>
-            <button class="nav-btn" onclick="switchMainTab('compare')">🔥 跨品牌智慧比價</button>
+            <button class="nav-btn" onclick="switchMainTab('compare')">🔥 競品定價分析</button>
             <button class="nav-btn" onclick="switchMainTab('rates')">💰 各家詳細費率</button>
         </div>
 
-        <!-- 區塊一：動態情報牆 (直覺化卡片) -->
+        <!-- 區塊一：情報牆 -->
         <div id="section-news" class="section active">
             <div class="news-list" id="news-container">
                 <div style="text-align:center; color:#888; padding: 20px;">載入情報中...</div>
             </div>
         </div>
 
-        <!-- 區塊二：跨品牌智慧比價 (全新功能) -->
+        <!-- 區塊二：競品定價分析 (遠傳基準) -->
         <div id="section-compare" class="section">
             <div class="toggle-group">
                 <button id="toggle-weekday" class="toggle-btn active" onclick="renderCompare(false)">工作日 (週一~五)</button>
                 <button id="toggle-weekend" class="toggle-btn" onclick="renderCompare(true)">週末假日 (六~日)</button>
             </div>
             <div style="text-align: center; margin-bottom: 15px; color: #64748b; font-size: 14px;">
-                系統會自動為您找出每個時段 <strong>最便宜</strong> 的充電費率並標記 👑
+                以 <strong>遠傳 (FET)</strong> 為基準，自動計算該時段對比競品最低價之優勢與劣勢。
             </div>
             <div style="overflow-x: auto;">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th class="time-col">時間</th>
+                            <th class="col-fet" style="color:#b91c1c;">遠傳 (基準)</th>
                             <th>EVALUE</th>
                             <th>iCharging</th>
                             <th>TAIL</th>
                             <th>U-POWER</th>
                             <th>YES!來電</th>
+                            <th style="background:#f8fafc; color:#0f172a; width: 140px;">💡 優劣勢分析</th>
                         </tr>
                     </thead>
                     <tbody id="compare-tbody"></tbody>
@@ -121,9 +126,10 @@
             </div>
         </div>
 
-        <!-- 區塊三：各家詳細費率 -->
+        <!-- 區塊三：詳細費率 -->
         <div id="section-rates" class="section">
             <div class="cpo-tabs">
+                <button id="btn-fet" class="cpo-btn" onclick="renderRate('FET')">遠傳 (時間)</button>
                 <button id="btn-evalue" class="cpo-btn" onclick="renderRate('EVALUE')">EVALUE (時間)</button>
                 <button id="btn-icharging" class="cpo-btn" onclick="renderRate('iCharging')">iCharging (時間)</button>
                 <button id="btn-tail" class="cpo-btn" onclick="renderRate('TAIL')">TAIL (時間)</button>
@@ -143,8 +149,9 @@
     </div>
 
     <script>
-        // 5 大 CPO 費率資料庫
+        // 💡 費率資料庫：加入遠傳 (FET) 預設參數，可依真實方案修改
         const rateConfigs = {
+            'FET': { type: 'TOU', peak: 10.9, offPeak: 6.8, holiday: 7.9, peakStart: 16, peakEnd: 21, color: '#ef4444' }, // 遠傳紅
             'EVALUE': { type: 'TOU', peak: 13.5, offPeak: 6.9, holiday: 8.5, peakStart: 16, peakEnd: 21, color: '#4CAF50' },
             'iCharging': { type: 'TOU', peak: 12.0, offPeak: 6.5, holiday: 6.5, peakStart: 18, peakEnd: 21, color: '#ea580c' },
             'TAIL': { type: 'TOU', peak: 11.9, offPeak: 8.9, holiday: 8.9, peakStart: 16, peakEnd: 21, color: '#0891b2' },
@@ -152,7 +159,7 @@
             'YES': { type: 'FLAT', price: 9.5, color: '#ca8a04' }
         };
 
-        const cposForCompare = ['EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
+        const cposForCompare = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
 
         function switchMainTab(tabName) {
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -160,12 +167,13 @@
             event.target.classList.add('active');
             document.getElementById('section-' + tabName).classList.add('active');
             
-            if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('EVALUE');
+            if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
             if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
         }
 
         const getCpoClass = (cpo) => {
             const lower = cpo.toLowerCase();
+            if(lower.includes('遠傳') || lower.includes('fet')) return 'cpo-fet';
             if(lower.includes('evalue')) return 'cpo-evalue';
             if(lower.includes('icharging') || lower.includes('cblok')) return 'cpo-icharging';
             if(lower.includes('u-power')) return 'cpo-upower';
@@ -174,7 +182,6 @@
             return 'cpo-default';
         };
         
-        // 渲染現代化情報卡片
         fetch('data.json')
             .then(res => res.json())
             .then(data => {
@@ -209,7 +216,6 @@
                 });
             }).catch(() => document.getElementById('news-container').innerHTML = '<div style="text-align:center;color:red;">載入失敗</div>');
 
-        // 🔥 跨品牌智慧比價渲染邏輯
         function getPriceAtHour(cpo, hour, isWeekend) {
             const config = rateConfigs[cpo];
             if (config.type === 'FLAT') return config.price;
@@ -218,6 +224,7 @@
             return config.offPeak;
         }
 
+        // 🔥 核心：競品定價分析邏輯
         function renderCompare(isWeekend) {
             document.getElementById('toggle-weekday').className = 'toggle-btn' + (!isWeekend ? ' active' : '');
             document.getElementById('toggle-weekend').className = 'toggle-btn' + (isWeekend ? ' active' : '');
@@ -229,24 +236,37 @@
                 const timeStr = String(h).padStart(2, '0') + ':00';
                 let rowHtml = `<tr><td class="time-col">${timeStr}</td>`;
                 
-                // 計算各家在該小時的價格
+                // 取出所有價格
                 let prices = cposForCompare.map(cpo => getPriceAtHour(cpo, h, isWeekend));
-                let minPrice = Math.min(...prices); // 找出最低價
+                let fetPrice = prices[0]; // 遠傳是陣列第一個
+                let otherPrices = prices.slice(1);
+                let minOtherPrice = Math.min(...otherPrices); // 競品中的最低價
                 
+                // 畫出各家價格
                 cposForCompare.forEach((cpo, index) => {
                     let price = prices[index];
-                    let isCheapest = price === minPrice;
-                    let displayStr = isCheapest ? `👑 $${price}` : `$${price}`;
-                    let cellClass = isCheapest ? 'cell-cheapest' : '';
-                    rowHtml += `<td class="${cellClass}">${displayStr}</td>`;
+                    let isFet = index === 0;
+                    let cellClass = isFet ? 'col-fet' : '';
+                    rowHtml += `<td class="${cellClass}">$${price.toFixed(1)}</td>`;
                 });
                 
-                rowHtml += `</tr>`;
+                // 計算優劣勢並加上標籤
+                let analysisHtml = '';
+                let diff = (fetPrice - minOtherPrice).toFixed(1);
+                
+                if (fetPrice < minOtherPrice) {
+                    analysisHtml = `<span class="cell-win">🏆 完勝 (省 $${Math.abs(diff)})</span>`;
+                } else if (fetPrice === minOtherPrice) {
+                    analysisHtml = `<span class="cell-tie">🤝 平手最佳</span>`;
+                } else {
+                    analysisHtml = `<span class="cell-lose">⚠️ 偏貴 (多 $${diff})</span>`;
+                }
+                
+                rowHtml += `<td>${analysisHtml}</td></tr>`;
                 tbody.innerHTML += rowHtml;
             }
         }
 
-        // 💰 個別詳細費率渲染邏輯
         function renderRate(cpo) {
             document.querySelectorAll('.cpo-btn').forEach(btn => {
                 btn.style.backgroundColor = 'white'; btn.style.color = '#64748b'; btn.style.borderColor = '#cbd5e1';
@@ -290,7 +310,7 @@
                         else if (h >= config.peakStart && h <= config.peakEnd) { price = config.peak; cellClass = 'cell-peak'; }
                         else { price = config.offPeak; cellClass = 'cell-off-peak'; }
                     } else { price = config.price; cellClass = 'cell-flat'; }
-                    rowHtml += `<td class="${cellClass}">$${price}</td>`;
+                    rowHtml += `<td class="${cellClass}">$${price.toFixed(1)}</td>`;
                 }
                 rowHtml += `</tr>`;
                 tbody.innerHTML += rowHtml;
