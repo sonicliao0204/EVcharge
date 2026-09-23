@@ -5,7 +5,6 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
-# 💡 這是解決紅叉叉的關鍵：賦予機器人完整的安全發布權限
 permissions:
   contents: read
   pages: write
@@ -20,7 +19,7 @@ jobs:
     steps:
       - name: 取得專案程式碼
         uses: actions/checkout@v4
-      
+        
       - name: 準備 Python 環境
         uses: actions/setup-python@v5
         with:
@@ -32,17 +31,13 @@ jobs:
       - name: 執行爬蟲，抓取最新資料
         run: python scraper.py
         
-      - name: 設定 GitHub Pages 
-        uses: actions/configure-pages@v5
+      - name: 設定 GitHub Pages
+        uses: actions/configure-pages@v4
         
       - name: 打包網頁檔案
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-          
-      - name: 發布到 GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
           
       - name: 發布到 GitHub Pages
         id: deployment
