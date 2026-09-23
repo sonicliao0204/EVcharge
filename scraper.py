@@ -4,14 +4,12 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
-import os
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36'
 }
 
 def extract_tags(title):
-    """自動標記硬體規格與活動優惠"""
     specs = []
     if re.search(r'360\s*kW|360k|500\s*kW|480\s*kW', title, re.IGNORECASE): specs.append('⚡超高速')
     if re.search(r'CCS1', title, re.IGNORECASE): specs.append('CCS1')
@@ -21,7 +19,6 @@ def extract_tags(title):
     return f" [{' | '.join(specs)}]" if specs else ""
 
 def fetch_cpo_news(base_url, cpo_name, extra_keywords=None):
-    """通用型爬蟲引擎"""
     news_items = []
     keywords = ['news', 'event', '活動', '公告', '啟用', '上線']
     if extra_keywords:
@@ -54,7 +51,7 @@ def fetch_cpo_news(base_url, cpo_name, extra_keywords=None):
         return []
 
 if __name__ == '__main__':
-    print("🚀 啟動 V2 架構 CPO 聯合爬蟲任務...")
+    print("🚀 啟動 5 大 CPO 聯合爬蟲任務...")
     
     all_data = []
     all_data += fetch_cpo_news("https://www.evalue.com.tw/news/", "EVALUE", ['detail'])
@@ -63,21 +60,8 @@ if __name__ == '__main__':
     all_data += fetch_cpo_news("https://www.tail.com.tw/", "TAIL 特爾電力")
     all_data += fetch_cpo_news("https://www.yes-energy.com.tw/", "YES!來電")
     
-    # 針對 V2 架構的路徑處理
-    data_dir = 'data'
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        print(f"已自動建立 {data_dir} 資料夾")
-    
-    # 根據 V2 架構，將檔案輸出至 data/ 資料夾內
-    # 若前端的 app.js 是讀取其他檔名 (如 market.json)，請直接修改下方的 'data.json'
-    output_path = os.path.join(data_dir, 'data.json')
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(all_data, f, ensure_ascii=False, indent=4)
-    
-    # 為了防呆與向下相容，同時在根目錄也寫入一份
+    # 確保資料直接寫入最外層，不使用任何資料夾
     with open('data.json', 'w', encoding='utf-8') as f:
         json.dump(all_data, f, ensure_ascii=False, indent=4)
     
-    print(f"✅ 成功！共抓取 {len(all_data)} 筆資料，並同步寫入 {output_path} 與根目錄。")
+    print(f"✅ 成功！共抓取 {len(all_data)} 筆最新資料。")
