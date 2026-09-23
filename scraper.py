@@ -10,7 +10,6 @@ def extract_tags(title):
     if re.search(r'CCS2', title, re.IGNORECASE): specs.append('CCS2')
     if any(k in title for k in ['免費','回饋','優惠','折扣','點數']): specs.append('💰優惠活動')
     if any(k in title for k in ['上線','啟用','營運','新站']): specs.append('🎉新站情報')
-    # 🆕 新增政策法規專屬標籤
     if any(k in title for k in ['電價','補助','法規','政策','規範','費率','綠能','電網']): specs.append('🏛️政策法規')
     return f" [{' | '.join(specs)}]" if specs else ""
 
@@ -34,51 +33,56 @@ def fetch_cpo_news(base_url, cpo_name, extra_keywords=None):
         return []
 
 def fetch_policy_news():
-    """🆕 專門抓取政策與電價動態的爬蟲"""
     news_items = []
     policy_sources = [
         {"name": "台電", "url": "https://www.taipower.com.tw/tc/news.aspx?mid=17", "kws": ['電價', '電網', '供電', '費率']},
         {"name": "經濟部", "url": "https://www.moeaea.gov.tw/ECW/populace/news/NewsList.aspx?kind=1", "kws": ['補助', '綠能', '電動車', '充電', '能源']}
     ]
-    
     for source in policy_sources:
         try:
             res = requests.get(source['url'], headers=HEADERS, timeout=15)
             res.encoding = 'utf-8'
             for a_tag in BeautifulSoup(res.text, 'html.parser').find_all('a', href=True):
                 title = a_tag.text.strip()
-                # 只要標題包含關鍵字就抓取
                 if len(title) > 5 and any(kw in title for kw in source['kws']):
                     href = a_tag.get('href', '')
-                    full_url = urllib.parse.urljoin(source['url'], href)
                     news_items.append({
-                        'cpo': source['name'], 
-                        'date': datetime.date.today().strftime('%Y-%m-%d'),
-                        'title': f"{title}{extract_tags(title)}", 
-                        'url': full_url
+                        'cpo': source['name'], 'date': datetime.date.today().strftime('%Y-%m-%d'),
+                        'title': f"{title}{extract_tags(title)}", 'url': urllib.parse.urljoin(source['url'], href)
                     })
         except Exception as e:
             print(f"[{source['name']}] 政策爬取失敗: {e}")
-            
     return list({item['url']: item for item in news_items}.values())[:4]
+
+def generate_operational_data(pricing_data):
+    """模擬串接遠傳充電樁作業管理平台，生成內部營運數據"""
+    # 從費率設定自動計算全市場最低尖峰費率
+    cpo_names = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES']
+    peak_prices = {cpo: (pricing_data[cpo]['peak'] if 'peak' in pricing_data[cpo] else pricing_data[cpo]['price']) for cpo in cpo_names}
+    lowest_cpo = min(peak_prices, key=peak_prices.get)
+    lowest_price = peak_prices[lowest_cpo]
+    
+    op_data = {
+        "fet_stations": 68,
+        "fet_growth_rate": "較上月成長 +12.5%",
+        "lowest_peak_rate": lowest_price,
+        "lowest_peak_cpo": "遠傳具備競爭優勢" if lowest_cpo == 'FET' else f"需注意 {lowest_cpo} 定價策略",
+        "ocpp_availability": 99.6
+    }
+    with open('data/stations.json', 'w', encoding='utf-8') as f:
+        json.dump(op_data, f, ensure_ascii=False, indent=4)
 
 def init_v2_2_structure():
     os.makedirs('data', exist_ok=True)
     
-    # 1. market.json (整合 CPO 動態與官方政策)
-    all_data = []
-    print("抓取政策動態...")
-    all_data += fetch_policy_news()
-    
-    print("抓取 CPO 商業動態...")
+    # 1. market.json
+    all_data = fetch_policy_news()
     all_data += fetch_cpo_news("https://www.evalue.com.tw/news/", "EVALUE", ['detail'])
     all_data += fetch_cpo_news("https://www.cblok.biz/news", "iCharging")
     all_data += fetch_cpo_news("https://www.u-power.com.tw/", "U-POWER")
     all_data += fetch_cpo_news("https://www.tail.com.tw/", "TAIL 特爾電力")
     all_data += fetch_cpo_news("https://www.yes-energy.com.tw/", "YES!來電")
-    
-    with open('data/market.json', 'w', encoding='utf-8') as f:
-        json.dump(all_data, f, ensure_ascii=False, indent=4)
+    with open('data/market.json', 'w', encoding='utf-8') as f: json.dump(all_data, f, ensure_ascii=False, indent=4)
     
     # 2. pricing.json
     pricing = {
@@ -98,14 +102,15 @@ def init_v2_2_structure():
     }
     with open('data/price_history.json', 'w', encoding='utf-8') as f: json.dump(history, f, ensure_ascii=False, indent=4)
     
-    # 4-7. 建立 V2.2 擴充架構所需的佔位檔案
-    stub_files = ['operators.json', 'price_history_verified.json', 'stations.json', 'cpo_profiles.json']
-    for sf in stub_files:
-        path = os.path.join('data', sf)
-        if not os.path.exists(path):
-            with open(path, 'w', encoding='utf-8') as f: json.dump([], f)
+    # 4. stations.json (動態營運指標)
+    generate_operational_data(pricing)
+    
+    # 5. 其他佔位檔
+    for sf in ['operators.json', 'price_history_verified.json', 'cpo_profiles.json']:
+        if not os.path.exists(os.path.join('data', sf)):
+            with open(os.path.join('data', sf), 'w', encoding='utf-8') as f: json.dump([], f)
 
 if __name__ == '__main__':
-    print("🚀 啟動 V2.2 企業架構聯合爬蟲 (已擴充政府政策雷達)...")
+    print("🚀 啟動情報與營運資料聯合爬蟲...")
     init_v2_2_structure()
-    print("✅ V2.2 資訊庫更新完畢！")
+    print("✅ 內部營運資料庫 (stations.json) 更新完畢！")
