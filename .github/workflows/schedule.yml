@@ -43,3 +43,7 @@ jobs:
       - name: 發布到 GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+          
+      - name: 發布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
