@@ -14,9 +14,7 @@ function switchMainTab(tabName) {
     
     if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
     if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
-    if(tabName === 'trend') {
-        setTimeout(() => renderTrendChart(), 50);
-    }
+    if(tabName === 'trend') setTimeout(() => renderTrendChart(), 50);
 }
 
 const getCpoClass = (cpo) => {
@@ -30,14 +28,15 @@ const getCpoClass = (cpo) => {
     return 'cpo-default';
 };
 
-// 讀取 V2 架構的 market.json
 function fetchMarketNews() {
+    // 讀取 V2.2 的 data/market.json
     fetch('data/market.json')
         .then(res => res.json())
         .then(data => {
             const container = document.getElementById('news-container');
             container.innerHTML = '';
             document.getElementById('update-time').innerText = '最後更新: ' + new Date().toLocaleString('zh-TW', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+            document.getElementById('kpi-news-count').innerText = data.length + ' 筆';
             
             if (data.length === 0) return container.innerHTML = '<div style="text-align:center;">尚無情報</div>';
 
@@ -48,9 +47,8 @@ function fetchMarketNews() {
                 if (tagMatch) {
                     mainTitle = item.title.replace(tagMatch[0], '').trim();
                     tagMatch[1].split('|').forEach(t => {
-                        t = t.trim();
                         const isHighlight = t.includes('優惠') || t.includes('新站') ? 'highlight' : '';
-                        tagsHtml += `<span class="spec-tag ${isHighlight}">${t}</span>`;
+                        tagsHtml += `<span class="spec-tag ${isHighlight}">${t.trim()}</span>`;
                     });
                 }
                 container.innerHTML += `
@@ -61,19 +59,16 @@ function fetchMarketNews() {
                             <div class="spec-tags">${tagsHtml}</div>
                         </div>
                         <div class="news-date">${item.date}</div>
-                    </div>
-                `;
+                    </div>`;
             });
-        }).catch(err => console.log("等待 market.json 生成...", err));
+        }).catch(e => console.log("等待 data/market.json 產生...", e));
 }
 
-// 讀取 V2 架構的 pricing.json
 function fetchPricingData() {
     fetch('data/pricing.json')
         .then(res => res.json())
-        .then(data => {
-            cpoPricingData = data;
-        }).catch(err => console.log("等待 pricing.json 生成...", err));
+        .then(data => { cpoPricingData = data; })
+        .catch(() => console.log("等待 data/pricing.json 產生..."));
 }
 
 function getPriceAtHour(cpo, hour, isWeekend) {
@@ -100,64 +95,39 @@ function renderCompare(isWeekend) {
         
         let prices = cposForCompare.map(cpo => getPriceAtHour(cpo, h, isWeekend));
         let fetPrice = prices[0];
-        let otherPrices = prices.slice(1);
-        let minOtherPrice = Math.min(...otherPrices);
+        let minOtherPrice = Math.min(...prices.slice(1));
         
         cposForCompare.forEach((cpo, index) => {
-            let price = prices[index];
-            let isFet = index === 0;
-            let cellClass = isFet ? 'col-fet' : '';
-            rowHtml += `<td class="${cellClass}">$${price.toFixed(1)}</td>`;
+            rowHtml += `<td class="${index === 0 ? 'col-fet' : ''}">$${prices[index].toFixed(1)}</td>`;
         });
         
-        let analysisHtml = '';
         let diff = (fetPrice - minOtherPrice).toFixed(1);
-        if (fetPrice < minOtherPrice) {
-            analysisHtml = `<span class="cell-win">🏆 完勝 (省 $${Math.abs(diff)})</span>`;
-        } else if (fetPrice === minOtherPrice) {
-            analysisHtml = `<span class="cell-tie">🤝 平手</span>`;
-        } else {
-            analysisHtml = `<span class="cell-lose">⚠️ 偏貴 (多 $${diff})</span>`;
-        }
+        if (fetPrice < minOtherPrice) rowHtml += `<td><span class="cell-win">🏆 完勝 (省 $${Math.abs(diff)})</span></td></tr>`;
+        else if (fetPrice === minOtherPrice) rowHtml += `<td><span class="cell-tie">🤝 平手</span></td></tr>`;
+        else rowHtml += `<td><span class="cell-lose">⚠️ 偏貴 (多 $${diff})</span></td></tr>`;
         
-        rowHtml += `<td>${analysisHtml}</td></tr>`;
         tbody.innerHTML += rowHtml;
     }
 }
 
 function renderRate(cpo) {
     if (Object.keys(cpoPricingData).length === 0) return;
-    document.querySelectorAll('.cpo-btn').forEach(btn => {
-        btn.style.backgroundColor = 'white'; btn.style.color = '#64748b'; btn.style.borderColor = '#cbd5e1';
-    });
+    document.querySelectorAll('.cpo-btn').forEach(btn => { btn.style.backgroundColor = 'white'; btn.style.color = '#64748b'; btn.style.borderColor = '#cbd5e1'; });
     const config = cpoPricingData[cpo];
     let activeBtn = document.getElementById('btn-' + cpo.toLowerCase().replace('-',''));
-    activeBtn.style.backgroundColor = config.color; activeBtn.style.color = 'white'; activeBtn.style.borderColor = config.color;
+    if(activeBtn) { activeBtn.style.backgroundColor = config.color; activeBtn.style.color = 'white'; activeBtn.style.borderColor = config.color; }
     
-    const summaryDiv = document.getElementById('rate-summary');
-    const tbody = document.getElementById('rate-tbody');
     document.getElementById('rate-table-ui').style.borderColor = config.color;
-
+    const summaryDiv = document.getElementById('rate-summary');
     if (config.type === 'TOU') {
-        summaryDiv.innerHTML = `
-            <div class="rate-box" style="border-color: #86efac; color: #14532d;">
-                <div class="rate-box-title">離峰時段</div><div class="rate-box-price">${config.offPeak}<span class="unit">元/kWh</span></div>
-            </div>
-            <div class="rate-box" style="border-color: #fdba74; color: #7c2d12;">
-                <div class="rate-box-title">尖峰時段 ${config.peakStart}:00-${config.peakEnd+1}:00</div><div class="rate-box-price">${config.peak}<span class="unit">元/kWh</span></div>
-            </div>
-            <div class="rate-box" style="border-color: #d9f99d; color: #3f6212;">
-                <div class="rate-box-title">假日時段</div><div class="rate-box-price">${config.holiday}<span class="unit">元/kWh</span></div>
-            </div>
-        `;
+        summaryDiv.innerHTML = `<div class="rate-box" style="border-color:#16a34a;color:#16a34a;"><div class="rate-box-title">離峰時段</div><div class="rate-box-price">${config.offPeak}<span class="unit">元/kWh</span></div></div>
+                                <div class="rate-box" style="border-color:#ea580c;color:#ea580c;"><div class="rate-box-title">尖峰時段 ${config.peakStart}:00-${config.peakEnd+1}:00</div><div class="rate-box-price">${config.peak}<span class="unit">元/kWh</span></div></div>
+                                <div class="rate-box" style="border-color:#ca8a04;color:#ca8a04;"><div class="rate-box-title">假日時段</div><div class="rate-box-price">${config.holiday}<span class="unit">元/kWh</span></div></div>`;
     } else {
-        summaryDiv.innerHTML = `
-            <div class="rate-box" style="border-color: ${config.color}; color: ${config.color};">
-                <div class="rate-box-title">全時段單一費率</div><div class="rate-box-price">${config.price}<span class="unit">元/kWh</span></div>
-            </div>
-        `;
+        summaryDiv.innerHTML = `<div class="rate-box" style="border-color:${config.color};color:${config.color};"><div class="rate-box-title">全時段單一費率</div><div class="rate-box-price">${config.price}<span class="unit">元/kWh</span></div></div>`;
     }
 
+    const tbody = document.getElementById('rate-tbody');
     tbody.innerHTML = '';
     for (let h = 0; h < 24; h++) {
         const timeStr = String(h).padStart(2, '0') + ':00~';
@@ -171,18 +141,14 @@ function renderRate(cpo) {
             } else { price = config.price; cellClass = 'cell-flat'; }
             rowHtml += `<td class="${cellClass}">$${price.toFixed(1)}</td>`;
         }
-        rowHtml += `</tr>`;
-        tbody.innerHTML += rowHtml;
+        tbody.innerHTML += rowHtml + `</tr>`;
     }
 }
 
-// 讀取 V2 架構的 price_history.json
 function renderTrendChart() {
     const ctx = document.getElementById('expansionChart').getContext('2d');
-    if (trendChartInstance) {
-        trendChartInstance.destroy();
-    }
-
+    if (trendChartInstance) trendChartInstance.destroy();
+    
     fetch('data/price_history.json')
         .then(res => res.json())
         .then(historyData => {
@@ -198,12 +164,10 @@ function renderTrendChart() {
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top', labels: { font: { family: 'Noto Sans TC', size: 13 } } }, tooltip: { mode: 'index', intersect: false } },
-                    scales: { y: { beginAtZero: true, title: { display: true, text: '累計 DC 快充站數', font: { size: 14, weight: 'bold' } } }, x: { grid: { display: false } } },
-                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { font: { family: 'Noto Sans TC', size: 13 } } } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: '累計 DC 快充站數', font: { size: 13, weight: 'bold' } } }, x: { grid: { display: false } } },
                 }
             });
-        }).catch(err => console.log('等待 price_history.json 生成...', err));
+        }).catch(err => console.log('等待 data/price_history.json 生成...'));
 }
