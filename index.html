@@ -124,12 +124,13 @@
         </div>
 
         <!-- 全新：量化趨勢分析區塊 -->
-        <div id="section-trend" class="section">
+            <div id="section-trend" class="section">
             <div style="text-align: center; margin-bottom: 20px; color: #64748b; font-size: 15px;">
                 追蹤各家 CPO 近半年快充站建置累計數量，掌握市場擴張動能與資本投入斜率。
             </div>
-            <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-                <canvas id="expansionChart" height="120"></canvas>
+            <!-- 💡 加上 position: relative 與固定高度，確保圖表不會縮小成 0 像素 -->
+            <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); position: relative; height: 400px; width: 100%;">
+                <canvas id="expansionChart"></canvas>
             </div>
         </div>
 
