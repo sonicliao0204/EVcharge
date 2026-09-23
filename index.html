@@ -90,6 +90,7 @@
             <button class="nav-btn active" onclick="switchMainTab('news')">📡 動態情報牆</button>
             <button class="nav-btn" onclick="switchMainTab('compare')">🔥 競品定價分析</button>
             <button class="nav-btn" onclick="switchMainTab('rates')">💰 各家詳細費率</button>
+            <button class="nav-btn" onclick="switchMainTab('trend')">📈 量化趨勢分析</button>
         </div>
 
         <!-- 區塊一：情報牆 -->
@@ -137,6 +138,15 @@
                 <button id="btn-upower" class="cpo-btn" onclick="renderRate('U-POWER')">U-POWER (單一)</button>
                 <button id="btn-yes" class="cpo-btn" onclick="renderRate('YES')">YES!來電 (單一)</button>
             </div>
+       <!-- 區塊四：量化趨勢分析 -->
+       <div id="section-trend" class="section">
+           <div style="text-align: center; margin-bottom: 20px; color: #64748b; font-size: 15px;">
+            追蹤各家 CPO 近半年快充站建置累計數量，掌握市場擴張動能與資本投入斜率。
+           </div>
+           <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+              <canvas id="expansionChart" height="120"></canvas>
+           </div>
+       </div>
             <div class="summary-cards" id="rate-summary"></div>
             <div style="overflow-x: auto;">
                 <table class="data-table" id="rate-table-ui">
@@ -216,7 +226,89 @@
                     `;
                 });
             }).catch(() => document.getElementById('news-container').innerHTML = '<div style="text-align:center;color:red;">載入失敗</div>');
+        let trendChartInstance = null;
 
+function renderTrendChart() {
+    const ctx = document.getElementById('expansionChart').getContext('2d');
+    
+    // 避免重複繪製圖表
+    if (trendChartInstance) {
+        trendChartInstance.destroy();
+    }
+
+    // 模擬的時序資料集 (後續可由 Python 爬蟲定期輸出歷史 JSON 來取代)
+    const months = ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'];
+    
+    trendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: '遠傳 (FET)',
+                    data: [12, 18, 25, 38, 52, 65],
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'U-POWER',
+                    data: [45, 48, 52, 55, 60, 68],
+                    borderColor: '#0369a1',
+                    borderWidth: 2,
+                    tension: 0.3
+                },
+                {
+                    label: 'EVALUE',
+                    data: [80, 82, 85, 87, 89, 92],
+                    borderColor: '#4CAF50',
+                    borderWidth: 2,
+                    tension: 0.3
+                },
+                {
+                    label: 'TAIL',
+                    data: [35, 40, 48, 55, 58, 62],
+                    borderColor: '#0891b2',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { font: { family: 'Noto Sans TC', size: 13 } } },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '累計 DC 快充站數', font: { size: 14, weight: 'bold' } }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            },
+            interaction: { mode: 'nearest', axis: 'x', intersect: false }
+        }
+    });
+}
+
+         // 修改原有的 switchMainTab 函數，加入觸發圖表渲染的邏輯
+         // 請找到原有的 switchMainTab 並替換為以下內容：
+        function switchMainTab(tabName) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('section-' + tabName).classList.add('active');
+    
+            if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
+            if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
+            if(tabName === 'trend') renderTrendChart();
+}
         function getPriceAtHour(cpo, hour, isWeekend) {
             const config = rateConfigs[cpo];
             if (config.type === 'FLAT') return config.price;
