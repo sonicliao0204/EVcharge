@@ -47,9 +47,8 @@
         .spec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
         .spec-tag { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: #f1f5f9; color: var(--text-muted); font-weight: 600;}
         .spec-tag.highlight { background: #fee2e2; color: #b91c1c; }
-        .spec-tag.policy { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; } /* 🆕 政策法規專屬視覺 */
+        .spec-tag.policy { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
 
-        /* 🆕 加入官方機構專屬標籤 */
         .cpo-gov { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; } 
         .cpo-fet { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .cpo-evalue { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
@@ -103,17 +102,17 @@
         </div>
 
         <div id="section-overview" class="section active">
-            <h3 style="margin-top:0; margin-bottom: 20px; font-size: 18px; color: var(--text-main);">新竹市智慧充電專案與全台 CPO 核心指標</h3>
+            <h3 style="margin-top:0; margin-bottom: 20px; font-size: 18px; color: var(--text-main);">內部營運與全台 CPO 核心指標</h3>
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <div class="kpi-title">遠傳站點涵蓋數 (FET)</div>
-                    <div class="kpi-value" id="kpi-fet-stations">65 站</div>
-                    <div class="kpi-desc">📈 較上月成長 +8.3%</div>
+                    <div class="kpi-value" id="kpi-fet-stations">-- 站</div>
+                    <div class="kpi-desc" id="kpi-fet-growth">🔄 同步中...</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-title">市場最低尖峰費率</div>
-                    <div class="kpi-value">$10.9</div>
-                    <div class="kpi-desc">🎯 遠傳具備競爭優勢</div>
+                    <div class="kpi-value" id="kpi-lowest-rate">$--</div>
+                    <div class="kpi-desc" id="kpi-lowest-cpo">🔄 比較中...</div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-title">今日情報追蹤總數</div>
@@ -122,8 +121,8 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-title">設備妥善率 (OCPP)</div>
-                    <div class="kpi-value">99.4%</div>
-                    <div class="kpi-desc">🟢 運行狀態良好</div>
+                    <div class="kpi-value" id="kpi-ocpp">--%</div>
+                    <div class="kpi-desc" id="kpi-ocpp-status">🔄 讀取中...</div>
                 </div>
             </div>
         </div>
@@ -192,6 +191,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             fetchMarketNews();
             fetchPricingData();
+            fetchOperationalData(); // 🆕 啟動營運資料載入
         });
 
         function switchMainTab(tabName) {
@@ -207,7 +207,6 @@
 
         const getCpoClass = (cpo) => {
             const lower = cpo.toLowerCase();
-            // 🆕 加入政府機構的專屬視覺辨識
             if(lower.includes('台電') || lower.includes('經濟部') || lower.includes('能源署')) return 'cpo-gov';
             if(lower.includes('遠傳') || lower.includes('fet')) return 'cpo-fet';
             if(lower.includes('evalue')) return 'cpo-evalue';
@@ -222,9 +221,7 @@
             fetch('data/market.json')
                 .then(res => res.json())
                 .then(data => populateNews(data))
-                .catch(() => {
-                    fetch('data.json').then(res => res.json()).then(data => populateNews(data)).catch(e => console.log(e));
-                });
+                .catch(() => { fetch('data.json').then(res => res.json()).then(data => populateNews(data)).catch(e => console.log(e)); });
         }
 
         function populateNews(data) {
@@ -244,7 +241,7 @@
                     tagMatch[1].split('|').forEach(t => {
                         let cssClass = 'spec-tag';
                         if (t.includes('優惠') || t.includes('新站')) cssClass += ' highlight';
-                        if (t.includes('政策') || t.includes('法規')) cssClass += ' policy'; // 🆕 政策標籤上色
+                        if (t.includes('政策') || t.includes('法規')) cssClass += ' policy';
                         tagsHtml += `<span class="${cssClass}">${t.trim()}</span>`;
                     });
                 }
@@ -274,6 +271,28 @@
                         'YES': {'type': 'FLAT', 'price': 9.5, 'color': '#ca8a04'}
                     };
                 });
+        }
+
+        function fetchOperationalData() {
+            fetch('data/stations.json')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('kpi-fet-stations').innerText = data.fet_stations + ' 站';
+                    document.getElementById('kpi-fet-growth').innerText = '📈 ' + data.fet_growth_rate;
+                    document.getElementById('kpi-lowest-rate').innerText = '$' + data.lowest_peak_rate;
+                    document.getElementById('kpi-lowest-cpo').innerText = '🎯 ' + data.lowest_peak_cpo;
+                    document.getElementById('kpi-ocpp').innerText = data.ocpp_availability + '%';
+                    
+                    let statusElement = document.getElementById('kpi-ocpp-status');
+                    if (data.ocpp_availability >= 99) {
+                        statusElement.innerText = '🟢 運行狀態良好';
+                        statusElement.style.color = '#16a34a';
+                    } else {
+                        statusElement.innerText = '⚠️ 需注意連線穩定度';
+                        statusElement.style.color = '#ea580c';
+                    }
+                })
+                .catch(() => console.log('等待營運資料生成...'));
         }
 
         function getPriceAtHour(cpo, hour, isWeekend) {
