@@ -123,13 +123,12 @@
             </div>
         </div>
 
-        <!-- 全新：量化趨勢分析區塊 -->
         <div id="section-trend" class="section">
             <div style="text-align: center; margin-bottom: 20px; color: #64748b; font-size: 15px;">
                 追蹤各家 CPO 近半年快充站建置累計數量，掌握市場擴張動能與資本投入斜率。
             </div>
-            <!-- 💡 加上 position: relative 與固定高度，確保圖表不會縮小成 0 像素 -->
-            <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); position: relative; height: 400px; width: 100%;">
+            <!-- 💡 修復 1：加入絕對高度 400px，確保畫布有空間伸展 -->
+            <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); height: 400px; width: 100%; position: relative;">
                 <canvas id="expansionChart"></canvas>
             </div>
         </div>
@@ -166,9 +165,8 @@
         };
 
         const cposForCompare = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
-        let trendChartInstance = null; // 全域圖表變數
+        let trendChartInstance = null;
 
-        // 統一的分頁切換邏輯
         function switchMainTab(tabName) {
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
@@ -177,7 +175,13 @@
             
             if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
             if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
-            if(tabName === 'trend') renderTrendChart(); // 切換時繪製趨勢圖
+            
+            // 💡 修復 2：延遲 50 毫秒，確保區塊從 display:none 變成 block 之後，才叫 Chart.js 畫圖
+            if(tabName === 'trend') {
+                setTimeout(() => {
+                    renderTrendChart();
+                }, 50);
+            }
         }
 
         const getCpoClass = (cpo) => {
@@ -272,7 +276,6 @@
             }
         }
 
-        // 📈 量化趨勢圖渲染邏輯
         function renderTrendChart() {
             const ctx = document.getElementById('expansionChart').getContext('2d');
             
@@ -287,49 +290,17 @@
                 data: {
                     labels: months,
                     datasets: [
-                        {
-                            label: '遠傳 (FET)',
-                            data: [12, 18, 25, 38, 52, 65],
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.3,
-                            fill: true
-                        },
-                        {
-                            label: 'U-POWER',
-                            data: [45, 48, 52, 55, 60, 68],
-                            borderColor: '#0369a1',
-                            borderWidth: 2,
-                            tension: 0.3
-                        },
-                        {
-                            label: 'EVALUE',
-                            data: [80, 82, 85, 87, 89, 92],
-                            borderColor: '#4CAF50',
-                            borderWidth: 2,
-                            tension: 0.3
-                        },
-                        {
-                            label: 'TAIL',
-                            data: [35, 40, 48, 55, 58, 62],
-                            borderColor: '#0891b2',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            tension: 0.3
-                        }
+                        { label: '遠傳 (FET)', data: [12, 18, 25, 38, 52, 65], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 3, tension: 0.3, fill: true },
+                        { label: 'U-POWER', data: [45, 48, 52, 55, 60, 68], borderColor: '#0369a1', borderWidth: 2, tension: 0.3 },
+                        { label: 'EVALUE', data: [80, 82, 85, 87, 89, 92], borderColor: '#4CAF50', borderWidth: 2, tension: 0.3 },
+                        { label: 'TAIL', data: [35, 40, 48, 55, 58, 62], borderColor: '#0891b2', borderWidth: 2, borderDash: [5, 5], tension: 0.3 }
                     ]
                 },
                 options: {
                     responsive: true,
-                    plugins: {
-                        legend: { position: 'top', labels: { font: { family: 'Noto Sans TC', size: 13 } } },
-                        tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: '累計 DC 快充站數', font: { size: 14, weight: 'bold' } } },
-                        x: { grid: { display: false } }
-                    },
+                    maintainAspectRatio: false, // 💡 修復 3：允許圖表無視原始比例，直接填滿我們設定的 400px 區塊
+                    plugins: { legend: { position: 'top', labels: { font: { family: 'Noto Sans TC', size: 13 } } }, tooltip: { mode: 'index', intersect: false } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: '累計 DC 快充站數', font: { size: 14, weight: 'bold' } } }, x: { grid: { display: false } } },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false }
                 }
             });
