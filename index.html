@@ -1,23 +1,321 @@
 <!DOCTYPE html>
-<html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="EV Charging Intelligence｜台灣電動車充電產業情報、競品價格、技術資料與故障分析戰情室"><meta property="og:title" content="EV Charging Intelligence｜台灣充電情報戰情室"><meta property="og:description" content="市場、價格、業者、技術與 OCPP Log 分析。"><title>⚡ EV Charging Intelligence｜台灣充電情報戰情室</title><link rel="stylesheet" href="css/style.css"></head>
-<body><div class="app">
-<header class="top"><div class="brand"><div class="logo">⚡</div><div><h1>EV Charging Intelligence</h1><div class="sub">台灣電動車充電產業情報戰情室 · Sonic Liao</div></div></div><div class="stamp" id="updated">資料更新中…</div></header>
-<nav class="nav"><button class="active" data-page="home">📡 戰情 Dashboard</button><button data-page="market">📈 市場情報</button><button data-page="pricing">💰 價格情報</button><button data-page="operators">🏢 業者情報</button><button data-page="tech">🔧 技術情報</button><button data-page="ai">🤖 Log Analyzer</button><button data-page="cases">📊 Case Study</button></nav>
-<main>
-<section id="home" class="page active"><div class="hero"><div class="eyebrow">MARKET · PRICING · TECHNICAL</div><h2>看懂市場．掌握充電．解決問題</h2><p>把充電業者、價格、情報與工程技術資料集中在同一個戰情室。V2.1 已將資料與前端分離，方便後續長期累積。</p></div>
-<div class="grid4"><div class="card"><div class="kpi-label">追蹤業者</div><div class="kpi" id="operatorCount">—</div><div class="delta">CPO Intelligence</div></div><div class="card"><div class="kpi-label">價格模型</div><div class="kpi" id="priceCount">—</div><div class="delta">AC / DC / TOU</div></div><div class="card"><div class="kpi-label">市場情報</div><div class="kpi" id="newsCount">—</div><div class="delta">JSON data source</div></div><div class="card"><div class="kpi-label">歷史價格序列</div><div class="kpi" id="historyCount">—</div><div class="delta">可持續累積</div></div></div>
-<div class="section-title"><h3>🔥 市場即時情報</h3><span>data/market.json</span></div><div class="grid2"><div class="card"><div id="homeNews" class="news"></div></div><div class="card"><h3 style="margin-top:0">💰 競品價格快照</h3><div id="miniPrices"></div></div></div>
-<div class="section-title"><h3>📈 價格趨勢</h3><span>Prototype history</span></div><div class="card"><canvas id="historyChart" class="sparkline" height="110"></canvas><div id="historyLegend" class="muted" style="font-size:11px;margin-top:8px"></div></div>
-<div class="section-title"><h3>🔧 Technical Health</h3><span>知識庫入口</span></div><div class="tech"><a href="#tech"><b>OCPP</b><span>1.6 / 2.0.1 · Transaction · Profile</span></a><a href="#tech"><b>ISO 15118</b><span>EVCC · SECC · Plug & Charge</span></a><a href="#tech"><b>Charging Hardware</b><span>Contactor · Meter · RCD · SPD</span></a><a href="#ai"><b>Fault Diagnosis</b><span>Log → Pattern → Check List</span></a></div></section>
-<section id="market" class="page"><div class="hero"><div class="eyebrow">MARKET INTELLIGENCE</div><h2>市場情報</h2><p>情報、優惠、新站與價格異動分開標記，後續可接更多官方資料來源。</p></div><div class="card"><div class="filters"><button class="chip active" data-filter="all">全部</button><button class="chip" data-filter="優惠">優惠</button><button class="chip" data-filter="新站">新站</button><button class="chip" data-filter="價格">價格</button></div><div id="allNews" class="news"></div></div></section>
-<section id="pricing" class="page"><div class="hero"><div class="eyebrow">PRICING INTELLIGENCE</div><h2>競品價格戰情</h2><p>價格資料獨立於 HTML，未來可由 API／爬蟲／人工校正寫入 pricing.json 與 price_history.json。</p></div><div class="filters"><button class="chip active" data-day="weekday">工作日</button><button class="chip" data-day="weekend">週末／假日</button></div><div class="card" style="overflow:auto"><table><thead><tr><th>業者</th><th>離峰</th><th>尖峰</th><th>假日</th><th>型態</th></tr></thead><tbody id="priceTable"></tbody></table></div><div class="section-title"><h3>📈 歷史價格</h3><span>Prototype data</span></div><div class="grid2"><div class="card"><canvas id="priceChart" class="sparkline" height="160"></canvas></div><div class="card"><div id="priceHistorySummary"></div></div></div></section>
-<section id="operators" class="page"><div class="hero"><div class="eyebrow">OPERATOR INTELLIGENCE</div><h2>業者情報</h2><p>每一家業者保留獨立欄位，之後可擴充站點數、功率、主要場域、合作夥伴與價格異動。</p></div><div class="grid3" id="operatorCards"></div></section>
-<section id="tech" class="page"><div class="hero"><div class="eyebrow">TECHNICAL INTELLIGENCE</div><h2>充電技術資料庫</h2><p>這一區是你的專業護城河：把實務遇到的 OCPP、ISO 15118、AC/DC 與故障案例沉澱成可搜尋知識。</p></div><div class="tech"><a><b>OCPP 1.6</b><span>RemoteStart · Stop · MeterValues · StatusNotification · ChargingProfile</span></a><a><b>OCPP 2.0.1</b><span>Device Model · Transaction Event · Security · Smart Charging</span></a><a><b>ISO 15118</b><span>EVCC ID · SECC · Plug & Charge · Certificate · TLS</span></a><a><b>CCS2</b><span>CP / PP · PLC · DIN 70121 · ISO 15118</span></a><a><b>CHAdeMO</b><span>DC charging · CAN communication · protection</span></a><a><b>AC Charging</b><span>CP · PP · Contactor · RCD · Meter</span></a><a><b>DC Charging</b><span>Power Module · DC Bus · Insulation · Contactor</span></a><a><b>Fault Code</b><span>Faulted · EVDisconnected · Over Voltage · Leakage</span></a></div></section>
-<section id="ai" class="page"><div class="hero"><div class="eyebrow">ENGINEERING ASSISTANT</div><h2>🤖 OCPP Log Analyzer</h2><p>目前先用瀏覽器端規則引擎；未來可接 AI API，輸出正式維修報告。</p></div><div class="grid2"><div class="card"><textarea id="logInput" placeholder="貼上 OCPP Log，例如：
-RemoteStartTransaction Accepted
-StatusNotification Charging
-MeterValues Current = 0.2A
-StatusNotification Finishing
-StopTransaction EVDisconnected"></textarea><button class="primary" id="analyzeBtn">🔍 開始分析</button></div><div class="card"><h3 style="margin-top:0">分析結果</h3><div id="analysisResult" class="result"><div id="findings"></div></div><div class="muted" id="emptyResult">尚未分析。建議至少貼上 StatusNotification、MeterValues、StopTransaction 等紀錄。</div></div></div></section>
-<section id="cases" class="page"><div class="hero"><div class="eyebrow">CASE STUDY</div><h2>工程案例</h2><p>把實際維運問題轉成可累積、可對外展示的專業案例。</p></div><div class="grid3"><div class="card case"><h3>AC L1 Terminal 異常</h3><p class="muted">從接點發熱、負載電流、端子壓接到保護機制建立檢查流程。</p><span class="tag">Hardware / Safety</span></div><div class="card case"><h3>RemoteStart Rejected</h3><p class="muted">從 OCPP request / response、connectorId、交易狀態追查遠端啟動失敗。</p><span class="tag">OCPP</span></div><div class="card case"><h3>MeterStart = MeterStop</h3><p class="muted">從 Charging → Finishing / EVDisconnected 與電流值判斷是否實際輸出能量。</p><span class="tag">Troubleshooting</span></div></div></section>
-</main><div class="footer">EV Charging Intelligence · Built for market research, engineering troubleshooting and professional knowledge sharing.</div></div><script src="js/app.js"></script></body></html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ 台灣充電情報戰情室</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-color: #f4f7f6; --text-main: #333; --card-bg: #ffffff; --primary-color: #2563eb; --border-color: #eaeaea; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .dashboard { width: 100%; max-width: 1100px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); }
+        .header h1 { margin: 0; font-size: 28px; color: #1e293b; display: flex; align-items: center; gap: 8px;}
+        .last-update { font-size: 14px; color: #888; background: #e2e8f0; padding: 6px 14px; border-radius: 20px; font-weight: 500;}
+        
+        .main-nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;}
+        .nav-btn { flex: 1; min-width: 150px; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; background: #e2e8f0; color: #475569; transition: 0.3s; }
+        .nav-btn.active { background: var(--primary-color); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .section { display: none; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .section.active { display: block; }
+
+        /* 情報卡片 */
+        .news-list { display: flex; flex-direction: column; gap: 15px; }
+        .news-card { display: flex; align-items: center; gap: 15px; padding: 16px; border: 1px solid var(--border-color); border-radius: 10px; transition: transform 0.2s; background: #fff; }
+        .news-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+        .news-cpo { flex-shrink: 0; width: 100px; text-align: center; padding: 8px 0; border-radius: 8px; font-weight: bold; font-size: 13px; }
+        .news-content { flex-grow: 1; }
+        .news-link { text-decoration: none; color: #1e293b; font-size: 16px; font-weight: 700; display: block; margin-bottom: 6px; }
+        .news-link:hover { color: var(--primary-color); }
+        .news-date { flex-shrink: 0; color: #94a3b8; font-size: 13px; width: 85px; text-align: right; }
+        
+        /* 品牌色 */
+        .cpo-fet { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; } /* 遠傳紅 */
+        .cpo-evalue { background: #ecfccb; color: #4d7c0f; border: 1px solid #bef264; }
+        .cpo-upower { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        .cpo-icharging { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
+        .cpo-tail { background: #cffafe; color: #0891b2; border: 1px solid #67e8f9; }
+        .cpo-yes { background: #fef08a; color: #a16207; border: 1px solid #fde047; }
+        .cpo-default { background: #f1f5f9; color: #475569; }
+
+        .spec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .spec-tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: 500;}
+        .spec-tag.highlight { background: #fef3c7; color: #b45309; }
+
+        /* 費率 UI */
+        .cpo-tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap; }
+        .cpo-btn { padding: 10px 20px; border: 2px solid #cbd5e1; background: white; border-radius: 25px; cursor: pointer; font-weight: bold; color: #64748b; font-size: 14px; transition: 0.2s;}
+        
+        .summary-cards { display: flex; gap: 15px; margin-bottom: 20px; text-align: center; }
+        .rate-box { flex: 1; padding: 15px; border: 3px solid; border-radius: 10px; background: white; }
+        .rate-box-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+        .rate-box-price { font-size: 28px; font-weight: bold; }
+        .unit { font-size: 16px; font-weight: normal; }
+
+        /* 比較表格專屬 */
+        .data-table { width: 100%; border-collapse: collapse; text-align: center; border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; white-space: nowrap; }
+        .data-table th, .data-table td { border: 1px solid #e2e8f0; padding: 10px 8px; font-size: 14px; }
+        .data-table th { background: #f8fafc; color: #475569; font-weight: bold; padding: 14px; }
+        .time-col { background: #f1f5f9 !important; color: #334155; font-weight: bold; width: 70px; }
+        
+        .col-fet { background: #fef2f2 !important; font-weight: bold; border-left: 2px solid #ef4444 !important; border-right: 2px solid #ef4444 !important; }
+        .cell-win { color: #16a34a; font-weight: 900; }
+        .cell-tie { color: #2563eb; font-weight: 900; }
+        .cell-lose { color: #dc2626; font-weight: 900; }
+
+        .cell-off-peak { background: #86efac; color: #14532d; font-weight: 500; }
+        .cell-peak { background: #fdba74; color: #7c2d12; font-weight: 500; }
+        .cell-holiday { background: #d9f99d; color: #3f6212; font-weight: 500; }
+        .cell-flat { background: #bae6fd; color: #0c4a6e; font-weight: 500; }
+
+        .toggle-group { display: flex; justify-content: center; margin-bottom: 20px; gap: 10px; }
+        .toggle-btn { padding: 10px 30px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; border: 2px solid #cbd5e1; background: white; color: #64748b; }
+        .toggle-btn.active { background: #334155; color: white; border-color: #334155; }
+
+        @media (max-width: 768px) {
+            .news-card { flex-direction: column; align-items: flex-start; gap: 10px;}
+            .news-date { text-align: left; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>⚡ 台灣充電情報戰情室</h1>
+            <div class="last-update" id="update-time">讀取資料中...</div>
+        </div>
+        
+        <div class="main-nav">
+            <button class="nav-btn active" onclick="switchMainTab('news')">📡 動態情報牆</button>
+            <button class="nav-btn" onclick="switchMainTab('compare')">🔥 競品定價分析</button>
+            <button class="nav-btn" onclick="switchMainTab('rates')">💰 各家詳細費率</button>
+        </div>
+
+        <!-- 區塊一：情報牆 -->
+        <div id="section-news" class="section active">
+            <div class="news-list" id="news-container">
+                <div style="text-align:center; color:#888; padding: 20px;">載入情報中...</div>
+            </div>
+        </div>
+
+        <!-- 區塊二：競品定價分析 (遠傳基準) -->
+        <div id="section-compare" class="section">
+            <div class="toggle-group">
+                <button id="toggle-weekday" class="toggle-btn active" onclick="renderCompare(false)">工作日 (週一~五)</button>
+                <button id="toggle-weekend" class="toggle-btn" onclick="renderCompare(true)">週末假日 (六~日)</button>
+            </div>
+            <div style="text-align: center; margin-bottom: 15px; color: #64748b; font-size: 14px;">
+                以 <strong>遠傳 (FET)</strong> 為基準，自動計算該時段對比競品最低價之優勢與劣勢。
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="time-col">時間</th>
+                            <th class="col-fet" style="color:#b91c1c;">遠傳 (基準)</th>
+                            <th>EVALUE</th>
+                            <th>iCharging</th>
+                            <th>TAIL</th>
+                            <th>U-POWER</th>
+                            <th>YES!來電</th>
+                            <th style="background:#f8fafc; color:#0f172a; width: 140px;">💡 優劣勢分析</th>
+                        </tr>
+                    </thead>
+                    <tbody id="compare-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 區塊三：詳細費率 -->
+        <div id="section-rates" class="section">
+            <div class="cpo-tabs">
+                <button id="btn-fet" class="cpo-btn" onclick="renderRate('FET')">遠傳 (時間)</button>
+                <button id="btn-evalue" class="cpo-btn" onclick="renderRate('EVALUE')">EVALUE (時間)</button>
+                <button id="btn-icharging" class="cpo-btn" onclick="renderRate('iCharging')">iCharging (時間)</button>
+                <button id="btn-tail" class="cpo-btn" onclick="renderRate('TAIL')">TAIL (時間)</button>
+                <button id="btn-upower" class="cpo-btn" onclick="renderRate('U-POWER')">U-POWER (單一)</button>
+                <button id="btn-yes" class="cpo-btn" onclick="renderRate('YES')">YES!來電 (單一)</button>
+            </div>
+            <div class="summary-cards" id="rate-summary"></div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="rate-table-ui">
+                    <thead>
+                        <tr><th class="time-col">時間</th><th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th></tr>
+                    </thead>
+                    <tbody id="rate-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 💡 費率資料庫：加入遠傳 (FET) 預設參數，可依真實方案修改
+        const rateConfigs = {
+            'FET': { type: 'TOU', peak: 10.9, offPeak: 6.8, holiday: 7.9, peakStart: 16, peakEnd: 21, color: '#ef4444' }, // 遠傳紅
+            'EVALUE': { type: 'TOU', peak: 13.5, offPeak: 6.9, holiday: 8.5, peakStart: 16, peakEnd: 21, color: '#4CAF50' },
+            'iCharging': { type: 'TOU', peak: 12.0, offPeak: 6.5, holiday: 6.5, peakStart: 18, peakEnd: 21, color: '#ea580c' },
+            'TAIL': { type: 'TOU', peak: 11.9, offPeak: 8.9, holiday: 8.9, peakStart: 16, peakEnd: 21, color: '#0891b2' },
+            'U-POWER': { type: 'FLAT', price: 9.9, color: '#0369a1' },
+            'YES': { type: 'FLAT', price: 9.5, color: '#ca8a04' }
+        };
+
+        const cposForCompare = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
+
+        function switchMainTab(tabName) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('section-' + tabName).classList.add('active');
+            
+            if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
+            if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
+        }
+
+        const getCpoClass = (cpo) => {
+            const lower = cpo.toLowerCase();
+            if(lower.includes('遠傳') || lower.includes('fet')) return 'cpo-fet';
+            if(lower.includes('evalue')) return 'cpo-evalue';
+            if(lower.includes('icharging') || lower.includes('cblok')) return 'cpo-icharging';
+            if(lower.includes('u-power')) return 'cpo-upower';
+            if(lower.includes('tail')) return 'cpo-tail';
+            if(lower.includes('yes')) return 'cpo-yes';
+            return 'cpo-default';
+        };
+        
+        fetch('data.json')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('news-container');
+                container.innerHTML = '';
+                document.getElementById('update-time').innerText = '最後更新: ' + new Date().toLocaleString('zh-TW', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+                
+                if (data.length === 0) return container.innerHTML = '<div style="text-align:center;">尚無情報</div>';
+
+                data.forEach(item => {
+                    let mainTitle = item.title;
+                    let tagsHtml = '';
+                    const tagMatch = item.title.match(/\[(.*?)\]/);
+                    if (tagMatch) {
+                        mainTitle = item.title.replace(tagMatch[0], '').trim();
+                        tagMatch[1].split('|').forEach(t => {
+                            t = t.trim();
+                            const isHighlight = t.includes('優惠') || t.includes('新站') ? 'highlight' : '';
+                            tagsHtml += `<span class="spec-tag ${isHighlight}">${t}</span>`;
+                        });
+                    }
+                    container.innerHTML += `
+                        <div class="news-card">
+                            <div class="news-cpo ${getCpoClass(item.cpo)}">${item.cpo}</div>
+                            <div class="news-content">
+                                <a href="${item.url}" target="_blank" class="news-link">${mainTitle}</a>
+                                <div class="spec-tags">${tagsHtml}</div>
+                            </div>
+                            <div class="news-date">${item.date}</div>
+                        </div>
+                    `;
+                });
+            }).catch(() => document.getElementById('news-container').innerHTML = '<div style="text-align:center;color:red;">載入失敗</div>');
+
+        function getPriceAtHour(cpo, hour, isWeekend) {
+            const config = rateConfigs[cpo];
+            if (config.type === 'FLAT') return config.price;
+            if (isWeekend) return config.holiday;
+            if (hour >= config.peakStart && hour <= config.peakEnd) return config.peak;
+            return config.offPeak;
+        }
+
+        // 🔥 核心：競品定價分析邏輯
+        function renderCompare(isWeekend) {
+            document.getElementById('toggle-weekday').className = 'toggle-btn' + (!isWeekend ? ' active' : '');
+            document.getElementById('toggle-weekend').className = 'toggle-btn' + (isWeekend ? ' active' : '');
+            
+            const tbody = document.getElementById('compare-tbody');
+            tbody.innerHTML = '';
+
+            for (let h = 0; h < 24; h++) {
+                const timeStr = String(h).padStart(2, '0') + ':00';
+                let rowHtml = `<tr><td class="time-col">${timeStr}</td>`;
+                
+                // 取出所有價格
+                let prices = cposForCompare.map(cpo => getPriceAtHour(cpo, h, isWeekend));
+                let fetPrice = prices[0]; // 遠傳是陣列第一個
+                let otherPrices = prices.slice(1);
+                let minOtherPrice = Math.min(...otherPrices); // 競品中的最低價
+                
+                // 畫出各家價格
+                cposForCompare.forEach((cpo, index) => {
+                    let price = prices[index];
+                    let isFet = index === 0;
+                    let cellClass = isFet ? 'col-fet' : '';
+                    rowHtml += `<td class="${cellClass}">$${price.toFixed(1)}</td>`;
+                });
+                
+                // 計算優劣勢並加上標籤
+                let analysisHtml = '';
+                let diff = (fetPrice - minOtherPrice).toFixed(1);
+                
+                if (fetPrice < minOtherPrice) {
+                    analysisHtml = `<span class="cell-win">🏆 完勝 (省 $${Math.abs(diff)})</span>`;
+                } else if (fetPrice === minOtherPrice) {
+                    analysisHtml = `<span class="cell-tie">🤝 平手最佳</span>`;
+                } else {
+                    analysisHtml = `<span class="cell-lose">⚠️ 偏貴 (多 $${diff})</span>`;
+                }
+                
+                rowHtml += `<td>${analysisHtml}</td></tr>`;
+                tbody.innerHTML += rowHtml;
+            }
+        }
+
+        function renderRate(cpo) {
+            document.querySelectorAll('.cpo-btn').forEach(btn => {
+                btn.style.backgroundColor = 'white'; btn.style.color = '#64748b'; btn.style.borderColor = '#cbd5e1';
+            });
+            const config = rateConfigs[cpo];
+            let activeBtn = document.getElementById('btn-' + cpo.toLowerCase().replace('-',''));
+            activeBtn.style.backgroundColor = config.color; activeBtn.style.color = 'white'; activeBtn.style.borderColor = config.color;
+            
+            const summaryDiv = document.getElementById('rate-summary');
+            const tbody = document.getElementById('rate-tbody');
+            document.getElementById('rate-table-ui').style.borderColor = config.color;
+
+            if (config.type === 'TOU') {
+                summaryDiv.innerHTML = `
+                    <div class="rate-box" style="border-color: #86efac; color: #14532d;">
+                        <div class="rate-box-title">離峰時段</div><div class="rate-box-price">${config.offPeak}<span class="unit">元/kWh</span></div>
+                    </div>
+                    <div class="rate-box" style="border-color: #fdba74; color: #7c2d12;">
+                        <div class="rate-box-title">尖峰時段 ${config.peakStart}:00-${config.peakEnd+1}:00</div><div class="rate-box-price">${config.peak}<span class="unit">元/kWh</span></div>
+                    </div>
+                    <div class="rate-box" style="border-color: #d9f99d; color: #3f6212;">
+                        <div class="rate-box-title">假日時段</div><div class="rate-box-price">${config.holiday}<span class="unit">元/kWh</span></div>
+                    </div>
+                `;
+            } else {
+                summaryDiv.innerHTML = `
+                    <div class="rate-box" style="border-color: ${config.color}; color: ${config.color};">
+                        <div class="rate-box-title">全時段單一費率</div><div class="rate-box-price">${config.price}<span class="unit">元/kWh</span></div>
+                    </div>
+                `;
+            }
+
+            tbody.innerHTML = '';
+            for (let h = 0; h < 24; h++) {
+                const timeStr = String(h).padStart(2, '0') + ':00~';
+                let rowHtml = `<tr><td class="time-col">${timeStr}</td>`;
+                for (let d = 1; d <= 7; d++) {
+                    let price = '', cellClass = '';
+                    if (config.type === 'TOU') {
+                        if (d >= 6) { price = config.holiday; cellClass = 'cell-holiday'; }
+                        else if (h >= config.peakStart && h <= config.peakEnd) { price = config.peak; cellClass = 'cell-peak'; }
+                        else { price = config.offPeak; cellClass = 'cell-off-peak'; }
+                    } else { price = config.price; cellClass = 'cell-flat'; }
+                    rowHtml += `<td class="${cellClass}">$${price.toFixed(1)}</td>`;
+                }
+                rowHtml += `</tr>`;
+                tbody.innerHTML += rowHtml;
+            }
+        }
+    </script>
+</body>
+</html>
