@@ -93,7 +93,7 @@
         .kb-title { font-weight: 700; font-size: 16px; color: var(--text-main); }
         .kb-solution { font-size: 14px; color: var(--text-muted); line-height: 1.6; padding: 12px; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; }
 
-        /* 🆕 AI Log Analyzer Styles */
+        /* AI Log Analyzer Styles */
         .log-textarea { width: 100%; height: 140px; padding: 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 15px; resize: vertical; box-sizing: border-box; background: #ffffff; color: #334155; }
         .log-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
         .btn-analyze { background: var(--text-main); color: white; border: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
@@ -201,13 +201,12 @@
         <div id="section-kb" class="section">
             <h3 style="margin-top:0; margin-bottom: 25px; font-size: 18px; color: var(--text-main);">技術與異常排解知識庫 (Tech KB)</h3>
             
-            <!-- 🆕 新增：OCPP Log 智慧診斷區塊 -->
             <div style="background: #f1f5f9; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 25px; margin-bottom: 30px;">
                 <h4 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                    🤖 OCPP Log 智慧診斷引擎
+                    🤖 OCPP Log 智慧診斷引擎 (RAG 驅動)
                 </h4>
                 <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
-                    將遠傳充電樁作業管理平台截取的 JSON 或 WebSocket 通訊紀錄貼於下方，系統將自動擷取特徵碼，並結合歷史維修語料庫給出排解建議。
+                    將遠傳充電樁作業管理平台截取的 JSON 或 WebSocket 通訊紀錄貼於下方，系統將直接呼叫後端 Python AI 引擎，自動檢索知識庫並生成專屬排障建議。
                 </p>
                 
                 <textarea id="ocpp-log-input" class="log-textarea" placeholder='請貼上 Log，例如:
@@ -216,7 +215,7 @@
 [3,"19223201",{"currentTime":"2026-09-23T14:30:00Z","interval":300,"status":"Rejected"}]'></textarea>
                 
                 <button class="btn-analyze" onclick="analyzeOcppLog()">
-                    🔍 執行特徵碼分析
+                    🔍 發送至 AI 大腦分析
                 </button>
 
                 <!-- 分析結果呈現區 -->
@@ -224,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- 原有知識庫列表 -->
             <h4 style="margin-top:0; margin-bottom: 15px; font-size: 16px; color: var(--text-main);">內部已知異常對策庫</h4>
             <div id="kb-container">
                 <div style="text-align:center; color:#888; padding: 20px;">載入技術文檔中...</div>
@@ -366,8 +364,8 @@
                 .catch(() => document.getElementById('kb-container').innerHTML = '<div style="text-align:center; color:#888; padding: 20px;">等待資料庫建立中...</div>');
         }
 
-        // 🆕 模擬 AI 智慧診斷引擎的邏輯
-        function analyzeOcppLog() {
+        // 🆕 透過 Fetch API 呼叫本地端 Python RAG 引擎
+        async function analyzeOcppLog() {
             const logText = document.getElementById('ocpp-log-input').value.trim();
             const resultDiv = document.getElementById('log-result');
 
@@ -380,62 +378,39 @@
 
             // 呈現讀取狀態
             resultDiv.style.display = 'block';
-            resultDiv.style.borderLeftColor = '#64748b';
-            resultDiv.innerHTML = `<span style="color: #64748b; font-weight: 600;">⏳ AI 引擎正在比對知識庫特徵碼，請稍候...</span>`;
+            resultDiv.style.borderLeftColor = '#8b5cf6';
+            resultDiv.innerHTML = `<span style="color: #8b5cf6; font-weight: 600;">🧠 AI RAG 引擎正在檢索知識庫與推論中，請稍候...</span>`;
 
-            // 延遲 800ms 模擬後端大腦的運算時間
-            setTimeout(() => {
-                let diagnosis = "";
-                let borderColor = "#16a34a"; 
-                let lowerLog = logText.toLowerCase();
+            try {
+                const response = await fetch('http://localhost:8000/analyze_log', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ log_content: logText })
+                });
 
-                // 簡單特徵碼比對邏輯 (未來可替換為呼叫 RAG Backend API)
-                if (lowerLog.includes('bootnotification') && (lowerLog.includes('rejected') || lowerLog.includes('failed'))) {
-                    borderColor = "#e11d48";
-                    diagnosis = `
-                        <div style="color: #e11d48; font-weight: 800; font-size: 16px; margin-bottom: 8px;">🚨 診斷結果：連線驗證遭拒 (BootNotification Rejected)</div>
-                        <div style="font-size: 14px; color: #334155; line-height: 1.6;">
-                            <strong>特徵分析：</strong>系統偵測到充電樁嘗試發送開機通知 (BootNotification)，但因驗證失敗遭到遠傳 CSMS 後台拒絕連線。<br>
-                            <strong>行動建議：</strong><br>
-                            1. 進入管理平台，確認該站點的 <code>ChargePointID</code> 是否建檔正確且無多餘空白。<br>
-                            2. 檢查充電樁連線密碼 (Authorization Key) 是否與系統配置完全一致。<br>
-                            3. 確認現場硬體韌體版本，並檢視 URI 端點設定。
-                        </div>`;
-                } else if (lowerLog.includes('statusnotification') && lowerLog.includes('faulted')) {
-                    borderColor = "#ea580c";
-                    diagnosis = `
-                        <div style="color: #ea580c; font-weight: 800; font-size: 16px; margin-bottom: 8px;">⚠️ 診斷結果：設備硬體異常 (StatusNotification Faulted)</div>
-                        <div style="font-size: 14px; color: #334155; line-height: 1.6;">
-                            <strong>特徵分析：</strong>設備回傳硬體故障狀態，已中斷充電服務。<br>
-                            <strong>行動建議：</strong><br>
-                            1. 檢查 Payload 中的 <code>errorCode</code> 欄位。若為 <code>EmergencyStop</code>，請聯繫場域業主確認急停按鈕是否遭誤按。<br>
-                            2. 若為 <code>OverVoltage</code>，請檢測配電盤供電是否穩定。<br>
-                            3. 可嘗試透過系統發送 <code>Reset</code> (Hard) 指令強制重啟設備。
-                        </div>`;
-                } else if (lowerLog.includes('heartbeat') || lowerLog.includes('timeout') || lowerLog.includes('offline')) {
-                    borderColor = "#0ea5e9";
-                    diagnosis = `
-                        <div style="color: #0ea5e9; font-weight: 800; font-size: 16px; margin-bottom: 8px;">📡 診斷結果：網路通訊異常 (Heartbeat Timeout)</div>
-                        <div style="font-size: 14px; color: #334155; line-height: 1.6;">
-                            <strong>特徵分析：</strong>心跳包逾時或未收到回覆，設備可能處於離線邊緣或因封包遺失造成假性斷線。<br>
-                            <strong>行動建議：</strong><br>
-                            1. 檢查站點的 4G 路由器訊號強度 (RSSI)。<br>
-                            2. 確認該站點 SIM 卡流量是否已達上限或欠費停機。<br>
-                            3. 若頻繁發生，可考慮將 <code>HeartbeatInterval</code> 設定拉長，降低斷線誤判率。
-                        </div>`;
-                } else {
-                    borderColor = "#16a34a";
-                    diagnosis = `
-                        <div style="color: #16a34a; font-weight: 800; font-size: 16px; margin-bottom: 8px;">✅ 診斷結果：未發現已知高風險錯誤</div>
-                        <div style="font-size: 14px; color: #334155; line-height: 1.6;">
-                            <strong>特徵分析：</strong>目前的 Log 內容未觸發系統知識庫中的嚴重異常特徵碼。<br>
-                            <strong>行動建議：</strong>若現場仍回報無法充電，建議匯出更長時間區段的 WebSocket 完整封包 (需包含 ChargePoint 傳送與 CSMS 接收)，並交由 L2 軟體工程師進階判讀。
-                        </div>`;
+                if (!response.ok) {
+                    throw new Error(`伺服器回應錯誤 (狀態碼: ${response.status})`);
                 }
 
-                resultDiv.style.borderLeftColor = borderColor;
-                resultDiv.innerHTML = diagnosis;
-            }, 800);
+                const data = await response.json();
+                
+                // 渲染 AI 生成的 HTML 診斷報告
+                resultDiv.style.borderLeftColor = "#10b981"; 
+                resultDiv.innerHTML = data.diagnosis_html;
+
+            } catch (error) {
+                resultDiv.style.borderLeftColor = "#e11d48";
+                resultDiv.innerHTML = `
+                    <div style="color: #e11d48; font-weight: 800; font-size: 16px; margin-bottom: 8px;">🚨 API 連線失敗</div>
+                    <div style="font-size: 14px; color: #334155; line-height: 1.6;">
+                        無法連接到後端 AI 引擎。請確認：<br>
+                        1. 您的終端機是否正在執行 <code>python rag_api.py</code><br>
+                        2. 伺服器是否正常運行在 <code>http://localhost:8000</code><br>
+                        3. 錯誤詳情: ${error.message}
+                    </div>`;
+            }
         }
 
         function getPriceAtHour(cpo, hour, isWeekend) {
