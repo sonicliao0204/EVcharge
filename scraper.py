@@ -55,8 +55,6 @@ def fetch_policy_news():
     return list({item['url']: item for item in news_items}.values())[:4]
 
 def generate_operational_data(pricing_data):
-    """模擬串接遠傳充電樁作業管理平台，生成內部營運數據"""
-    # 從費率設定自動計算全市場最低尖峰費率
     cpo_names = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES']
     peak_prices = {cpo: (pricing_data[cpo]['peak'] if 'peak' in pricing_data[cpo] else pricing_data[cpo]['price']) for cpo in cpo_names}
     lowest_cpo = min(peak_prices, key=peak_prices.get)
@@ -72,10 +70,19 @@ def generate_operational_data(pricing_data):
     with open('data/stations.json', 'w', encoding='utf-8') as f:
         json.dump(op_data, f, ensure_ascii=False, indent=4)
 
+def generate_tech_kb():
+    """生成技術與異常排解知識庫"""
+    kb_data = [
+        {"category": "OCPP", "issue": "Heartbeat 逾時與斷線", "solution": "檢視 OCPP message logs，確認網路通訊模組是否持續發送 BootNotification。若持續斷線，請檢查現場 4G 路由器訊號強度。"},
+        {"category": "ISO 15118", "issue": "Contract Certificate 交換失敗", "solution": "查驗 EVCC 控制器底層邏輯，確認 TLS 憑證與憑證授權中心 (V2G Root CA) 是否過期，需重新觸發 Plug & Charge 憑證更新合約。"},
+        {"category": "硬體介面", "issue": "CCS1 絕緣檢測 (Isolation Test) 失敗", "solution": "車端絕緣阻抗過低。請檢查槍頭接點是否受潮、磨損，或引導客戶暫停充電以保護車輛高壓電池，必要時派遣維護人員更換線束組件。"}
+    ]
+    with open('data/tech_kb.json', 'w', encoding='utf-8') as f:
+        json.dump(kb_data, f, ensure_ascii=False, indent=4)
+
 def init_v2_2_structure():
     os.makedirs('data', exist_ok=True)
     
-    # 1. market.json
     all_data = fetch_policy_news()
     all_data += fetch_cpo_news("https://www.evalue.com.tw/news/", "EVALUE", ['detail'])
     all_data += fetch_cpo_news("https://www.cblok.biz/news", "iCharging")
@@ -84,7 +91,6 @@ def init_v2_2_structure():
     all_data += fetch_cpo_news("https://www.yes-energy.com.tw/", "YES!來電")
     with open('data/market.json', 'w', encoding='utf-8') as f: json.dump(all_data, f, ensure_ascii=False, indent=4)
     
-    # 2. pricing.json
     pricing = {
         'FET': {'type': 'TOU', 'peak': 10.9, 'offPeak': 6.8, 'holiday': 7.9, 'peakStart': 16, 'peakEnd': 21, 'color': '#ef4444'},
         'EVALUE': {'type': 'TOU', 'peak': 13.5, 'offPeak': 6.9, 'holiday': 8.5, 'peakStart': 16, 'peakEnd': 21, 'color': '#4CAF50'},
@@ -95,22 +101,16 @@ def init_v2_2_structure():
     }
     with open('data/pricing.json', 'w', encoding='utf-8') as f: json.dump(pricing, f, ensure_ascii=False, indent=4)
     
-    # 3. price_history.json
     history = {
         "labels": ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'],
         "datasets": { "FET": [12, 18, 25, 38, 52, 65], "U-POWER": [45, 48, 52, 55, 60, 68], "EVALUE": [80, 82, 85, 87, 89, 92], "TAIL": [35, 40, 48, 55, 58, 62] }
     }
     with open('data/price_history.json', 'w', encoding='utf-8') as f: json.dump(history, f, ensure_ascii=False, indent=4)
     
-    # 4. stations.json (動態營運指標)
     generate_operational_data(pricing)
-    
-    # 5. 其他佔位檔
-    for sf in ['operators.json', 'price_history_verified.json', 'cpo_profiles.json']:
-        if not os.path.exists(os.path.join('data', sf)):
-            with open(os.path.join('data', sf), 'w', encoding='utf-8') as f: json.dump([], f)
+    generate_tech_kb()
 
 if __name__ == '__main__':
     print("🚀 啟動情報與營運資料聯合爬蟲...")
     init_v2_2_structure()
-    print("✅ 內部營運資料庫 (stations.json) 更新完畢！")
+    print("✅ 三大數據柱 (市場/營運/技術) JSON 生成完畢！")
