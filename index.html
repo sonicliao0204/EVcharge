@@ -15,6 +15,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     
+    <!-- 🆕 載入 Leaflet 地圖套件 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
     <style>
         :root { 
             --bg-color: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --card-bg: #ffffff; 
@@ -30,7 +33,7 @@
             --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5);
         }
 
-        .skip-link { position: absolute; top: -40px; left: 0; background: #000; color: white; padding: 8px; z-index: 100; transition: top 0.2s; }
+        .skip-link { position: absolute; top: -40px; left: 0; background: #000; color: white; padding: 8px; z-index: 10000; transition: top 0.2s; }
         .skip-link:focus { top: 0; }
         *:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 
@@ -44,7 +47,7 @@
         
         .last-update { font-size: 13px; color: var(--text-muted); background: var(--card-bg); padding: 8px 16px; border-radius: 30px; font-weight: 500; border: 1px solid var(--border-color); }
         .main-nav { display: inline-flex; background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 16px; gap: 6px; margin-bottom: 25px; flex-wrap: wrap; }
-        .nav-btn { min-width: 120px; padding: 10px 16px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.3s; }
+        .nav-btn { min-width: 110px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.3s; }
         .nav-btn:hover { background: var(--btn-hover); color: var(--text-main); }
         .nav-btn.active { background: var(--bg-color); color: var(--primary-color); box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);}
         
@@ -86,12 +89,11 @@
         .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
-        .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; } /* 寬度加大以容納新欄位 */
+        .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; }
         .data-table th, .data-table td { padding: 12px 10px; font-size: 14px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
         .data-table th { background: var(--bg-color); color: var(--text-muted); font-weight: 700; font-size: 12px; text-transform: uppercase; }
         .time-col { background: var(--card-bg); color: var(--text-muted); font-weight: 600; width: 75px; position: sticky; left: 0; z-index: 2;}
         
-        /* 針對建議價格欄位的特殊樣式 */
         .ai-suggest-col { background: #fefce8 !important; border-left: 2px solid #ca8a04 !important; }
         [data-theme="dark"] .ai-suggest-col { background: #422006 !important; border-left: 2px solid #a16207 !important; }
 
@@ -99,6 +101,10 @@
         .log-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
         .btn-analyze { background: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-analyze:hover { background: #dc2626; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        
+        /* 🆕 地圖 Popup 樣式 (適應深色模式) */
+        .leaflet-popup-content-wrapper { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; }
+        .leaflet-popup-tip { background: var(--card-bg); }
     </style>
 </head>
 <body>
@@ -115,6 +121,7 @@
         
         <nav class="main-nav" role="tablist">
             <button class="nav-btn active" role="tab" aria-selected="true" onclick="switchMainTab('overview', event)" onkeydown="handleTabKey(event, 'overview')">📊 營運與市場</button>
+            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('map', event)" onkeydown="handleTabKey(event, 'map')">🗺️ 站點地圖</button> <!-- 🆕 新增地圖按鈕 -->
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('news', event)" onkeydown="handleTabKey(event, 'news')">📡 情報牆</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('compare', event)" onkeydown="handleTabKey(event, 'compare')">🔥 競品定價</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('trend', event)" onkeydown="handleTabKey(event, 'trend')">📈 趨勢分析</button>
@@ -131,6 +138,18 @@
                     <div class="kpi-card"><div class="kpi-title">今日情報數</div><div class="kpi-value skeleton" id="kpi-news-count">00 筆</div><div class="kpi-desc">--</div></div>
                     <div class="kpi-card"><div class="kpi-title">妥善率 (OCPP)</div><div class="kpi-value skeleton" id="kpi-ocpp">00.0%</div><div class="kpi-desc" id="kpi-ocpp-status">--</div></div>
                 </div>
+            </section>
+
+            <!-- 🆕 新增：地圖分頁區塊 -->
+            <section id="section-map" class="section" role="tabpanel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="margin:0; color: var(--text-main);">全台營運站點分佈概況</h3>
+                    <div style="font-size: 13px; color: var(--text-muted); background: var(--bg-color); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16a34a; margin-right:4px;"></span> 正常營運
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc2626; margin-left:10px; margin-right:4px;"></span> 離線 / 異常
+                    </div>
+                </div>
+                <div id="station-map" style="height: 550px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color); z-index: 1;"></div>
             </section>
 
             <section id="section-news" class="section" role="tabpanel">
@@ -152,7 +171,6 @@
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">
-                        <!-- 🆕 增加 AI 建議定價欄位 -->
                         <thead>
                             <tr>
                                 <th class="time-col">時間</th>
@@ -194,12 +212,17 @@
         </main>
     </div>
 
+    <!-- 🆕 載入 Leaflet 地圖套件 JS (非同步) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <script>
         let allNewsData = [];
         let cpoPricingData = {};
         let techKbData = [];
         let trendChartInstance = null;
         let isChartJsLoaded = false;
+        let mapInstance = null; // 🆕 地圖實例
+        let mapTileLayer = null; // 🆕 地圖底層
 
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
@@ -209,12 +232,21 @@
                 document.getElementById('theme-color-meta').content = '#0f172a';
             }
         }
+        
         function toggleTheme() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
             document.getElementById('theme-color-meta').content = isDark ? '#f8fafc' : '#0f172a';
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
             if(trendChartInstance) trendChartInstance.update(); 
+            
+            // 🆕 動態切換地圖深淺色底圖
+            if (mapInstance && mapTileLayer) {
+                const newTileUrl = !isDark ? 
+                    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 
+                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                mapTileLayer.setUrl(newTileUrl);
+            }
         }
         initTheme();
 
@@ -253,6 +285,14 @@
             if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
             if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
             if(tabName === 'trend') loadChartJsAndRender();
+            
+            // 🆕 切換到地圖分頁時，初始化並修正尺寸
+            if(tabName === 'map') {
+                setTimeout(() => {
+                    initMap();
+                    if(mapInstance) mapInstance.invalidateSize(); // 解決隱藏元素導致的灰屏問題
+                }, 100);
+            }
         }
 
         function handleTabKey(event, tabName) {
@@ -260,6 +300,61 @@
                 event.preventDefault();
                 switchMainTab(tabName, event);
             }
+        }
+
+        // 🆕 地圖初始化邏輯
+        function initMap() {
+            if (mapInstance) return; // 避免重複初始化
+
+            // 設定中心點為台灣 (新竹/桃園一帶)
+            mapInstance = L.map('station-map').setView([24.8, 121.0], 9);
+            
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const tileUrl = isDark ? 
+                'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 
+                'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+            mapTileLayer = L.tileLayer(tileUrl, {
+                attribution: '&copy; OpenStreetMap & CartoDB'
+            }).addTo(mapInstance);
+
+            // 模擬的站點資料庫
+            const mockStations = [
+                { name: "遠傳 新竹市府站", lat: 24.8066, lng: 120.9686, cpo: "FET", status: "online", power: "120kW DC" },
+                { name: "遠傳 竹科園區站", lat: 24.7814, lng: 121.0124, cpo: "FET", status: "online", power: "180kW DC" },
+                { name: "遠傳 竹北高鐵站", lat: 24.8080, lng: 121.0403, cpo: "FET", status: "offline", power: "360kW DC" }, // 模擬斷線
+                { name: "遠傳 桃園青埔站", lat: 25.0130, lng: 121.2140, cpo: "FET", status: "online", power: "180kW DC" },
+                { name: "遠傳 台北遠企站", lat: 25.0263, lng: 121.5494, cpo: "FET", status: "online", power: "360kW DC" },
+                { name: "U-POWER 新竹慈雲", lat: 24.7952, lng: 121.0160, cpo: "U-POWER", status: "online", power: "360kW DC" },
+                { name: "EVALUE 新竹巨城", lat: 24.8090, lng: 120.9740, cpo: "EVALUE", status: "online", power: "120kW DC" }
+            ];
+
+            mockStations.forEach(station => {
+                const isOnline = station.status === 'online';
+                const markerColor = isOnline ? '#16a34a' : '#dc2626'; // 綠色正常，紅色異常
+                
+                const circleMarker = L.circleMarker([station.lat, station.lng], {
+                    radius: 8,
+                    fillColor: markerColor,
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(mapInstance);
+                
+                const statusHtml = isOnline ? 
+                    `<span style="color:#16a34a; font-weight:bold;">🟢 正常營運</span>` : 
+                    `<span style="color:#dc2626; font-weight:bold;">🔴 OCPP 斷線/異常</span>`;
+
+                circleMarker.bindPopup(`
+                    <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 160px;">
+                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">${station.name}</div>
+                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>營運商:</strong> ${station.cpo}</div>
+                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>設備規格:</strong> ${station.power}</div>
+                        <div style="font-size: 13px; margin-top: 8px;"><strong>狀態:</strong> ${statusHtml}</div>
+                    </div>
+                `);
+            });
         }
 
         function loadChartJsAndRender() {
@@ -370,20 +465,18 @@
             return (hour >= conf.peakStart && hour <= conf.peakEnd) ? conf.peak : conf.offPeak;
         }
 
-        // 🆕 AI 建議定價的運算邏輯
         function renderCompare(isWeekend) {
             document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
             document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
             
-            // 明確指定陣列順序，確保與 Table 欄位一對一對應
             const cposForCompare = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
             if(Object.keys(cpoPricingData).length === 0) return;
 
             let html = '';
             for (let h = 0; h < 24; h++) {
                 const prices = cposForCompare.map(cpo => getPrice(cpo, h, isWeekend));
-                const fetPrice = prices[0]; // 遠傳價格
-                const minOtherPrice = Math.min(...prices.slice(1)); // 其他業者的最低價
+                const fetPrice = prices[0]; 
+                const minOtherPrice = Math.min(...prices.slice(1)); 
                 const diff = (fetPrice - minOtherPrice).toFixed(1);
                 
                 html += `<tr><td class="time-col">${String(h).padStart(2,'0')}:00</td>`;
@@ -392,22 +485,17 @@
                     html += `<td style="${i===0?'font-weight:bold; color:var(--primary-color);':''}color:var(--text-main);">$${p.toFixed(1)}</td>`;
                 });
                 
-                // 1. 產生當前優劣勢
                 if (fetPrice < minOtherPrice) html += `<td><span style="color:#16a34a;">🏆 勝 ($${Math.abs(diff)})</span></td>`;
                 else if (fetPrice === minOtherPrice) html += `<td><span style="color:#0ea5e9;">🤝 平</span></td>`;
                 else html += `<td><span style="color:#dc2626;">⚠️ 輸 ($${diff})</span></td>`;
 
-                // 2. 🆕 產生 AI 建議定價邏輯
                 let suggestionTag = '';
                 if (fetPrice < minOtherPrice) {
-                    // 若已是最低，建議保持現狀不削價
                     suggestionTag = `<span style="color:#16a34a; font-weight:700;">$${fetPrice.toFixed(1)} (保持優勢)</span>`;
                 } else if (fetPrice === minOtherPrice) {
-                    // 若平手，微降 0.1 搶市占 (設定底線價格為 6.0)
                     let recPrice = Math.max(fetPrice - 0.1, 6.0);
                     suggestionTag = `<span style="color:#ca8a04; font-weight:700;">$${recPrice.toFixed(1)} (微降搶市)</span>`;
                 } else {
-                    // 若比別人貴，建議跟進最低價再減 0.1
                     let recPrice = Math.max(minOtherPrice - 0.1, 6.0);
                     suggestionTag = `<span style="color:#dc2626; font-weight:700;">$${recPrice.toFixed(1)} (建議降價)</span>`;
                 }
