@@ -86,11 +86,15 @@
         .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
-        .data-table { width: 100%; min-width: 800px; border-collapse: collapse; text-align: center; }
+        .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; } /* 寬度加大以容納新欄位 */
         .data-table th, .data-table td { padding: 12px 10px; font-size: 14px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
         .data-table th { background: var(--bg-color); color: var(--text-muted); font-weight: 700; font-size: 12px; text-transform: uppercase; }
         .time-col { background: var(--card-bg); color: var(--text-muted); font-weight: 600; width: 75px; position: sticky; left: 0; z-index: 2;}
         
+        /* 針對建議價格欄位的特殊樣式 */
+        .ai-suggest-col { background: #fefce8 !important; border-left: 2px solid #ca8a04 !important; }
+        [data-theme="dark"] .ai-suggest-col { background: #422006 !important; border-left: 2px solid #a16207 !important; }
+
         .log-textarea { width: 100%; height: 140px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 15px; background: var(--bg-color); color: var(--text-main); }
         .log-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
         .btn-analyze { background: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
@@ -148,7 +152,15 @@
                 </div>
                 <div class="table-responsive">
                     <table class="data-table">
-                        <thead><tr><th class="time-col">時間</th><th>遠傳</th><th>EVALUE</th><th>iCharging</th><th>TAIL</th><th>U-POWER</th><th>YES!來電</th><th>優勢</th></tr></thead>
+                        <!-- 🆕 增加 AI 建議定價欄位 -->
+                        <thead>
+                            <tr>
+                                <th class="time-col">時間</th>
+                                <th>遠傳</th><th>EVALUE</th><th>iCharging</th><th>TAIL</th><th>U-POWER</th><th>YES!來電</th>
+                                <th>當前優劣</th>
+                                <th class="ai-suggest-col" style="color: #ca8a04;">🤖 AI 建議定價 (遠傳)</th>
+                            </tr>
+                        </thead>
                         <tbody id="compare-tbody"></tbody>
                     </table>
                 </div>
@@ -333,7 +345,10 @@
             cpoPricingData = {
                 'FET': {'type': 'TOU', 'peak': 10.9, 'offPeak': 6.8, 'holiday': 7.9, 'peakStart': 16, 'peakEnd': 21},
                 'EVALUE': {'type': 'TOU', 'peak': 13.5, 'offPeak': 6.9, 'holiday': 8.5, 'peakStart': 16, 'peakEnd': 21},
-                'U-POWER': {'type': 'FLAT', 'price': 9.9}
+                'iCharging': {'type': 'TOU', 'peak': 12.0, 'offPeak': 6.5, 'holiday': 6.5, 'peakStart': 18, 'peakEnd': 21},
+                'TAIL': {'type': 'TOU', 'peak': 11.9, 'offPeak': 8.9, 'holiday': 8.9, 'peakStart': 16, 'peakEnd': 21},
+                'U-POWER': {'type': 'FLAT', 'price': 9.9},
+                'YES': {'type': 'FLAT', 'price': 9.5}
             };
             buildRateTabs();
         }
@@ -355,26 +370,49 @@
             return (hour >= conf.peakStart && hour <= conf.peakEnd) ? conf.peak : conf.offPeak;
         }
 
+        // 🆕 AI 建議定價的運算邏輯
         function renderCompare(isWeekend) {
             document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
             document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
-            const cpos = Object.keys(cpoPricingData);
-            if(cpos.length === 0) return;
+            
+            // 明確指定陣列順序，確保與 Table 欄位一對一對應
+            const cposForCompare = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
+            if(Object.keys(cpoPricingData).length === 0) return;
 
             let html = '';
             for (let h = 0; h < 24; h++) {
-                const prices = cpos.map(cpo => getPrice(cpo, h, isWeekend));
-                const min = Math.min(...prices.slice(1));
-                const diff = (prices[0] - min).toFixed(1);
+                const prices = cposForCompare.map(cpo => getPrice(cpo, h, isWeekend));
+                const fetPrice = prices[0]; // 遠傳價格
+                const minOtherPrice = Math.min(...prices.slice(1)); // 其他業者的最低價
+                const diff = (fetPrice - minOtherPrice).toFixed(1);
                 
                 html += `<tr><td class="time-col">${String(h).padStart(2,'0')}:00</td>`;
+                
                 prices.forEach((p, i) => {
                     html += `<td style="${i===0?'font-weight:bold; color:var(--primary-color);':''}color:var(--text-main);">$${p.toFixed(1)}</td>`;
                 });
                 
-                if (prices[0] < min) html += `<td><span style="color:#16a34a;">🏆 勝 ($${Math.abs(diff)})</span></td></tr>`;
-                else if (prices[0] === min) html += `<td><span style="color:#0ea5e9;">🤝 平</span></td></tr>`;
-                else html += `<td><span style="color:#dc2626;">⚠️ 輸 ($${diff})</span></td></tr>`;
+                // 1. 產生當前優劣勢
+                if (fetPrice < minOtherPrice) html += `<td><span style="color:#16a34a;">🏆 勝 ($${Math.abs(diff)})</span></td>`;
+                else if (fetPrice === minOtherPrice) html += `<td><span style="color:#0ea5e9;">🤝 平</span></td>`;
+                else html += `<td><span style="color:#dc2626;">⚠️ 輸 ($${diff})</span></td>`;
+
+                // 2. 🆕 產生 AI 建議定價邏輯
+                let suggestionTag = '';
+                if (fetPrice < minOtherPrice) {
+                    // 若已是最低，建議保持現狀不削價
+                    suggestionTag = `<span style="color:#16a34a; font-weight:700;">$${fetPrice.toFixed(1)} (保持優勢)</span>`;
+                } else if (fetPrice === minOtherPrice) {
+                    // 若平手，微降 0.1 搶市占 (設定底線價格為 6.0)
+                    let recPrice = Math.max(fetPrice - 0.1, 6.0);
+                    suggestionTag = `<span style="color:#ca8a04; font-weight:700;">$${recPrice.toFixed(1)} (微降搶市)</span>`;
+                } else {
+                    // 若比別人貴，建議跟進最低價再減 0.1
+                    let recPrice = Math.max(minOtherPrice - 0.1, 6.0);
+                    suggestionTag = `<span style="color:#dc2626; font-weight:700;">$${recPrice.toFixed(1)} (建議降價)</span>`;
+                }
+                
+                html += `<td class="ai-suggest-col">${suggestionTag}</td></tr>`;
             }
             document.getElementById('compare-tbody').innerHTML = html;
         }
@@ -397,7 +435,6 @@
             document.getElementById('rate-tbody').innerHTML = html;
         }
 
-        // --- 補回完整的 4 家 CPO 趨勢資料集 ---
         function renderTrendChart() {
             fetchData('data/price_history.json', data => {
                 const ctx = document.getElementById('expansionChart').getContext('2d');
