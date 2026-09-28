@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <!-- 12. SEO 與 Meta 標籤補齊 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="台灣充電情報戰情室 V2.2 - 提供全台電動車充電樁 CPO 費率分析、營運概況與 OCPP 智慧診斷">
@@ -12,16 +11,11 @@
     
     <title>⚡ 台灣充電情報戰情室 V2.2 企業版</title>
 
-    <!-- 5. 效能：字型 preconnect 預先連線 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <!-- 3. 效能：移除同步載入的 Chart.js，改為點擊趨勢頁時按需動態載入 -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
-
     <style>
-        /* 7. UX：深色模式 (CSS 變數持久化設定) */
         :root { 
             --bg-color: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --card-bg: #ffffff; 
             --primary-color: #ef4444; --border-color: #e2e8f0; --btn-hover: #f1f5f9;
@@ -36,7 +30,6 @@
             --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5);
         }
 
-        /* 11. a11y：Skip-link 隱藏跳轉連結與 Focus-visible 樣式 */
         .skip-link { position: absolute; top: -40px; left: 0; background: #000; color: white; padding: 8px; z-index: 100; transition: top 0.2s; }
         .skip-link:focus { top: 0; }
         *:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
@@ -59,11 +52,9 @@
         .section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 10. UX：骨架屏 (Skeleton Loading) */
         .skeleton { background: linear-gradient(90deg, var(--btn-hover) 25%, var(--border-color) 50%, var(--btn-hover) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 4px; color: transparent !important; user-select: none; }
         @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* KPI & Cards */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .kpi-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; position: relative; overflow: hidden; }
         .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary-color); }
@@ -71,7 +62,6 @@
         .kpi-value { font-size: 26px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
         .kpi-desc { font-size: 12px; color: #16a34a; margin-top: 6px; font-weight: 600; }
 
-        /* 9. UX：新聞搜尋與篩選器 */
         .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .search-input { flex: 1; min-width: 200px; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); }
         .cpo-select { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); }
@@ -87,7 +77,6 @@
         .spec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
         .spec-tag { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: var(--bg-color); color: var(--text-muted); font-weight: 600; border: 1px solid var(--border-color);}
 
-        /* CPO Colors */
         .cpo-gov { background: #334155; color: #fff; border: 1px solid #1e293b; } 
         .cpo-fet { background: #dc2626; color: #fff; border: 1px solid #b91c1c; }
         .cpo-evalue { background: #16a34a; color: #fff; border: 1px solid #15803d; }
@@ -96,7 +85,6 @@
         .cpo-tail { background: #0891b2; color: #fff; border: 1px solid #0e7490; }
         .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
 
-        /* 8. UX：資料表水平滑動防爆框 */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
         .data-table { width: 100%; min-width: 800px; border-collapse: collapse; text-align: center; }
         .data-table th, .data-table td { padding: 12px 10px; font-size: 14px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
@@ -122,7 +110,6 @@
         </header>
         
         <nav class="main-nav" role="tablist">
-            <!-- 1. Bug修復：使用顯式傳遞 event，支援鍵盤操作 -->
             <button class="nav-btn active" role="tab" aria-selected="true" onclick="switchMainTab('overview', event)" onkeydown="handleTabKey(event, 'overview')">📊 營運與市場</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('news', event)" onkeydown="handleTabKey(event, 'news')">📡 情報牆</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('compare', event)" onkeydown="handleTabKey(event, 'compare')">🔥 競品定價</button>
@@ -143,7 +130,6 @@
             </section>
 
             <section id="section-news" class="section" role="tabpanel">
-                <!-- 9. UX：情報牆搜尋過濾器 -->
                 <div class="filter-bar">
                     <input type="text" id="news-search" class="search-input" placeholder="🔍 搜尋關鍵字 (如: 降價、新站)..." onkeyup="filterNews()">
                     <select id="news-cpo-filter" class="cpo-select" onchange="filterNews()">
@@ -197,14 +183,12 @@
     </div>
 
     <script>
-        // 全域變數
         let allNewsData = [];
         let cpoPricingData = {};
         let techKbData = [];
         let trendChartInstance = null;
         let isChartJsLoaded = false;
 
-        // 7. UX：深淺色模式持久化邏輯
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -218,11 +202,10 @@
             document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
             document.getElementById('theme-color-meta').content = isDark ? '#f8fafc' : '#0f172a';
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
-            if(trendChartInstance) trendChartInstance.update(); // 觸發圖表顏色重繪
+            if(trendChartInstance) trendChartInstance.update(); 
         }
         initTheme();
 
-        // 初始化
         document.addEventListener("DOMContentLoaded", () => {
             fetchData('data/stations.json', populateKpis, fallbackKpi);
             fetchData('data/market.json', setupNews, fallbackNews);
@@ -230,7 +213,6 @@
             fetchData('data/tech_kb.json', data => { techKbData = data; }, () => { techKbData = []; });
         });
 
-        // 共用 Fetch 函式 (附帶 10. 錯誤重試與骨架屏解除)
         async function fetchData(url, onSuccess, onFail) {
             try {
                 const res = await fetch(url);
@@ -243,7 +225,6 @@
             }
         }
 
-        // 1. Bug：顯式 Event 綁定與鍵盤支援
         function switchMainTab(tabName, event) {
             document.querySelectorAll('.nav-btn').forEach(btn => { 
                 btn.classList.remove('active'); 
@@ -257,7 +238,6 @@
             }
             document.getElementById('section-' + tabName).classList.add('active');
             
-            // 延遲渲染表格/圖表
             if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
             if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
             if(tabName === 'trend') loadChartJsAndRender();
@@ -270,7 +250,6 @@
             }
         }
 
-        // 3. 效能：按需載入 Chart.js
         function loadChartJsAndRender() {
             if (isChartJsLoaded) { renderTrendChart(); return; }
             const script = document.createElement('script');
@@ -279,7 +258,6 @@
             document.head.appendChild(script);
         }
 
-        // --- KPI 邏輯 ---
         function populateKpis(data) {
             document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
             document.getElementById('kpi-fet-stations').innerText = data.fet_stations + ' 站';
@@ -293,12 +271,10 @@
             populateKpis({fet_stations: 65, fet_growth_rate: "靜態展示模式", lowest_peak_rate: 10.9, lowest_peak_cpo: "遠傳 (基準)", ocpp_availability: 99.4});
         }
 
-        // --- 新聞與 6. 標題清洗 9. 搜尋過濾 ---
         function setupNews(data) {
             allNewsData = data;
             document.getElementById('kpi-news-count').innerText = data.length + ' 筆';
             
-            // 建立 CPO 下拉選單
             const cpos = [...new Set(data.map(item => item.cpo))];
             const select = document.getElementById('news-cpo-filter');
             cpos.forEach(cpo => {
@@ -325,10 +301,8 @@
             const container = document.getElementById('news-container');
             if (data.length === 0) { container.innerHTML = '<div style="padding:20px; text-align:center;">無符合條件之情報</div>'; return; }
             
-            // 4. 效能：字串累加替換 += DOM 操作
             let html = '';
             data.forEach(item => {
-                // 6. UX：清洗標題雜訊 (如日期、公版括號)
                 let cleanTitle = item.title.replace(/202\d[/-]\d{1,2}[/-]\d{1,2}|【.*?】|\[.*?\]/g, '').trim();
                 let tagsHtml = '';
                 const tagMatch = item.title.match(/\[(.*?)\]/);
@@ -354,7 +328,6 @@
             container.innerHTML = html;
         }
 
-        // --- 費率比價與 4. 迴圈重構 ---
         function setupPricing(data) { cpoPricingData = data; buildRateTabs(); }
         function fallbackPricing() {
             cpoPricingData = {
@@ -424,6 +397,7 @@
             document.getElementById('rate-tbody').innerHTML = html;
         }
 
+        // --- 補回完整的 4 家 CPO 趨勢資料集 ---
         function renderTrendChart() {
             fetchData('data/price_history.json', data => {
                 const ctx = document.getElementById('expansionChart').getContext('2d');
@@ -436,8 +410,10 @@
                     data: {
                         labels: data.labels,
                         datasets: [
-                            { label: '遠傳', data: data.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                            { label: 'U-POWER', data: data.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 }
+                            { label: '遠傳 (FET)', data: data.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+                            { label: 'U-POWER', data: data.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 },
+                            { label: 'EVALUE', data: data.datasets['EVALUE'], borderColor: '#16a34a', tension: 0.3 },
+                            { label: 'TAIL', data: data.datasets['TAIL'], borderColor: '#0891b2', borderDash: [5, 5], tension: 0.3 }
                         ]
                     },
                     options: { responsive: true, maintainAspectRatio: false }
@@ -445,7 +421,6 @@
             }, () => console.log('趨勢圖表無資料'));
         }
 
-        // 2. 致命 Bug 修復：OCPP API 容錯降級設計 (API 失敗直接切換前端規則引擎)
         async function analyzeOcppLog() {
             const logText = document.getElementById('ocpp-log-input').value.trim();
             const resultDiv = document.getElementById('log-result');
@@ -459,7 +434,6 @@
             resultDiv.innerHTML = '📡 正在嘗試呼叫 AI 後端 API...';
 
             try {
-                // 設定 3 秒 Timeout，避免 GitHub Pages 卡死
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000);
                 
@@ -475,18 +449,16 @@
                 resultDiv.style.borderLeftColor = "#10b981"; 
                 resultDiv.innerHTML = data.diagnosis_html;
             } catch (error) {
-                // 核心降級機制：改用前端比對 tech_kb.json 內容
                 resultDiv.style.borderLeftColor = "#f59e0b";
                 resultDiv.innerHTML = `<div style="color:var(--text-muted); font-size:12px; margin-bottom:8px;">⚠️ API 連線逾時，已切換至「前端備援規則庫」比對。</div>` 
                                     + runFrontendRuleEngine(logText);
             }
         }
 
-        // 獨立的前端診斷規則引擎
         function runFrontendRuleEngine(log) {
             const lowerLog = log.toLowerCase();
             let match = techKbData.find(kb => {
-                let kw = kb.issue.toLowerCase().split(' ')[0]; // 簡易抓取 issue 第一個詞
+                let kw = kb.issue.toLowerCase().split(' ')[0];
                 return lowerLog.includes(kw) || (lowerLog.includes('rejected') && kb.issue.includes('連線拒絕'));
             });
 
