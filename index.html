@@ -17,7 +17,7 @@
     
     <!-- 載入 Leaflet 地圖套件 CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- 🆕 載入 SheetJS (用於前端解析 Excel 檔案) -->
+    <!-- 載入 SheetJS -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <style>
@@ -35,7 +35,6 @@
             --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5);
         }
 
-        /* 讓標準 OSM 地圖在深色模式下自動反轉為科技深色 */
         [data-theme="dark"] .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
 
         .skip-link { position: absolute; top: -40px; left: 0; background: #000; color: white; padding: 8px; z-index: 10000; transition: top 0.2s; }
@@ -110,7 +109,6 @@
         .leaflet-popup-content-wrapper { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; }
         .leaflet-popup-tip { background: var(--card-bg); }
         
-        /* 🆕 檔案上傳按鈕樣式 */
         .upload-btn { background: var(--primary-color); color: white; border: none; cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-block; transition: 0.2s;}
         .upload-btn:hover { background: #dc2626; box-shadow: var(--shadow-sm); }
     </style>
@@ -148,12 +146,11 @@
                 </div>
             </section>
 
-            <!-- 🗺️ 地圖分頁 (新增 Excel 匯入控制列) -->
+            <!-- 🗺️ 地圖分頁 (整合 MOTC EVConnectorLiveStatus) -->
             <section id="section-map" class="section" role="tabpanel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                         <h3 style="margin:0; color: var(--text-main);">全台營運站點分佈</h3>
-                        <!-- 🆕 Excel 上傳與下載範本按鈕 -->
                         <label class="upload-btn">
                             📁 匯入 Excel 站點
                             <input type="file" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
@@ -163,8 +160,9 @@
                     </div>
                     
                     <div style="font-size: 13px; color: var(--text-muted); background: var(--bg-color); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
-                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16a34a; margin-right:4px;"></span> 正常營運
-                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc2626; margin-left:10px; margin-right:4px;"></span> 離線 / 異常
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16a34a; margin-right:4px;"></span> 可用 (Available)
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#0ea5e9; margin-left:10px; margin-right:4px;"></span> 充電中 (Charging)
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc2626; margin-left:10px; margin-right:4px;"></span> 故障/離線 (Faulted/Offline)
                     </div>
                 </div>
                 <div id="station-map" style="height: 550px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color); z-index: 1;"></div>
@@ -242,7 +240,7 @@
         
         let mapInstance = null;
         let mapTileLayer = null;
-        let markersLayer = null; // 🆕 用於管理與清除圖標圖層
+        let markersLayer = null; 
 
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
@@ -313,7 +311,7 @@
             }
         }
 
-        // --- 🗺️ 地圖與 Excel 解析邏輯 ---
+        // --- 🗺️ 地圖與 MOTC EVConnectorLiveStatus 整合邏輯 ---
         function initMap() {
             if (mapInstance) return; 
 
@@ -322,34 +320,33 @@
                 attribution: '&copy; OpenStreetMap'
             }).addTo(mapInstance);
 
-            // 建立圖層群組，方便後續清除與重新渲染
             markersLayer = new L.FeatureGroup();
             mapInstance.addLayer(markersLayer);
 
-            // 載入預設模擬資料
+            // 預設模擬資料 (整合 MOTC 即時槍態)
             const mockStations = [
-                { "站點名稱": "遠傳 新竹市府站", "緯度": 24.8066, "經度": 120.9686, "營運商": "FET", "狀態": "正常", "總功率(kW)": 120, "充電樁數": 2 },
-                { "站點名稱": "遠傳 竹北高鐵站", "緯度": 24.8080, "經度": 121.0403, "營運商": "FET", "狀態": "異常", "總功率(kW)": 360, "充電樁數": 4 },
-                { "站點名稱": "U-POWER 新竹慈雲", "緯度": 24.7952, "經度": 121.0160, "營運商": "U-POWER", "狀態": "正常", "總功率(kW)": 360, "充電樁數": 6 }
+                { "站點名稱": "遠傳 新竹市府站", "緯度": 24.8066, "經度": 120.9686, "營運商": "FET", "即時槍態": "Available", "總功率(kW)": 120, "充電樁數": 2 },
+                { "站點名稱": "遠傳 竹科園區站", "緯度": 24.7814, "經度": 121.0124, "營運商": "FET", "即時槍態": "Charging", "總功率(kW)": 180, "充電樁數": 4 },
+                { "站點名稱": "遠傳 竹北高鐵站", "緯度": 24.8080, "經度": 121.0403, "營運商": "FET", "即時槍態": "Faulted", "總功率(kW)": 360, "充電樁數": 4 },
+                { "站點名稱": "U-POWER 新竹慈雲", "緯度": 24.7952, "經度": 121.0160, "營運商": "U-POWER", "即時槍態": "Available", "總功率(kW)": 360, "充電樁數": 6 }
             ];
             renderMapMarkers(mockStations);
         }
 
-        // 🆕 下載公版 Excel 格式
         function downloadExcelTemplate() {
+            // 擴充公版格式：包含「即時槍態 (EVConnectorLiveStatus)」
             const ws_data = [
-                ['站點名稱', '緯度', '經度', '營運商', '狀態', '總功率(kW)', '充電樁數'],
-                ['遠傳 內湖瑞光站', 25.0792, 121.5794, 'FET', '正常', 360, 4],
-                ['遠傳 台中七期站', 24.1631, 120.6418, 'FET', '異常', 120, 2],
-                ['EVALUE 左營高鐵站', 22.6865, 120.3075, 'EVALUE', '正常', 180, 4]
+                ['站點名稱', '緯度', '經度', '營運商', '即時槍態', '總功率(kW)', '充電樁數'],
+                ['遠傳 內湖瑞光站', 25.0792, 121.5794, 'FET', 'Available', 360, 4],
+                ['遠傳 台中七期站', 24.1631, 120.6418, 'FET', 'Charging', 120, 2],
+                ['EVALUE 左營高鐵站', 22.6865, 120.3075, 'EVALUE', 'Faulted', 180, 4]
             ];
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "充電站點庫");
-            XLSX.writeFile(wb, "CPO_Stations_Template.xlsx");
+            XLSX.writeFile(wb, "CPO_LiveStatus_Template.xlsx");
         }
 
-        // 🆕 處理前端 Excel 檔案上傳
         function handleExcelUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -374,7 +371,6 @@
                     statusText.innerText = `✅ 成功匯入 ${jsonData.length} 筆站點`;
                     statusText.style.color = '#16a34a';
 
-                    // 同步更新首頁 KPI 數字
                     document.getElementById('kpi-fet-stations').innerText = jsonData.length + ' 站';
                     document.getElementById('kpi-fet-growth').innerText = '依據 Excel 資料更新';
 
@@ -385,28 +381,42 @@
                 }
             };
             reader.readAsArrayBuffer(file);
-            event.target.value = ''; // 清除 input 值以允許重複上傳相同檔案
+            event.target.value = ''; 
         }
 
-        // 🆕 將 JSON 資料渲染為地圖上的圓點
+        // MOTC EVConnectorLiveStatus 解析邏輯
         function renderMapMarkers(data) {
             if(!markersLayer) return;
-            markersLayer.clearLayers(); // 清除舊圖標
+            markersLayer.clearLayers(); 
 
             data.forEach(row => {
                 const name = row['站點名稱'] || '未知站點';
                 const lat = parseFloat(row['緯度']);
                 const lng = parseFloat(row['經度']);
                 const cpo = row['營運商'] || '未知';
-                const rawStatus = String(row['狀態'] || '').toLowerCase();
-                // 只要包含「正常」或是 online 就算運作中
-                const isOnline = rawStatus.includes('正常') || rawStatus === 'online';
                 const power = row['總功率(kW)'] || '--';
                 const plugs = row['充電樁數'] || '--';
+                
+                // 優先讀取「即時槍態」，若無則退回讀取「狀態」
+                const rawStatus = String(row['即時槍態'] || row['狀態'] || '').toLowerCase();
+                
+                if (isNaN(lat) || isNaN(lng)) return; 
 
-                if (isNaN(lat) || isNaN(lng)) return; // 略過無效座標
+                let markerColor = '#64748b'; // 預設灰色 (Unknown/Offline)
+                let statusHtml = '';
 
-                const markerColor = isOnline ? '#16a34a' : '#dc2626';
+                if (rawStatus.includes('available') || rawStatus.includes('可用') || rawStatus.includes('正常')) {
+                    markerColor = '#16a34a'; 
+                    statusHtml = `<span style="color:#16a34a; font-weight:bold;">🟢 可用 (Available)</span>`;
+                } else if (rawStatus.includes('charging') || rawStatus.includes('充電中')) {
+                    markerColor = '#0ea5e9'; 
+                    statusHtml = `<span style="color:#0ea5e9; font-weight:bold;">⚡ 充電中 (Charging)</span>`;
+                } else if (rawStatus.includes('faulted') || rawStatus.includes('異常') || rawStatus.includes('故障')) {
+                    markerColor = '#dc2626'; 
+                    statusHtml = `<span style="color:#dc2626; font-weight:bold;">🔴 故障 (Faulted)</span>`;
+                } else {
+                    statusHtml = `<span style="color:#64748b; font-weight:bold;">⚫ 離線 (Offline)</span>`;
+                }
 
                 const circleMarker = L.circleMarker([lat, lng], {
                     radius: 8,
@@ -416,10 +426,6 @@
                     opacity: 1,
                     fillOpacity: 0.9
                 });
-
-                const statusHtml = isOnline ? 
-                    `<span style="color:#16a34a; font-weight:bold;">🟢 正常營運</span>` : 
-                    `<span style="color:#dc2626; font-weight:bold;">🔴 OCPP 斷線/異常</span>`;
 
                 circleMarker.bindPopup(`
                     <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 170px;">
@@ -434,7 +440,6 @@
                 markersLayer.addLayer(circleMarker);
             });
             
-            // 自動調整地圖視角以包含所有標記
             if(markersLayer.getLayers().length > 0) {
                 const bounds = markersLayer.getBounds();
                 mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
