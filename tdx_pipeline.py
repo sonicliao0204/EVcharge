@@ -1,55 +1,120 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles # 🆕 允許前端讀取靜態 JSON
-from pydantic import BaseModel
 import os
+import requests
+import json
+import sqlite3
+from datetime import datetime
 
-# 🆕 載入我們剛剛寫好的 TDX 管線
-from tdx_pipeline import TDXIngestion, EVDataProcessor, EVDatabaseMart
+class TDXIngestion:
+    def __init__(self, client_id: str, client_secret: str):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.token = self._get_token()
 
-# ... (保留您原本的 LangChain 與 Chroma 設定) ...
+    def _get_token(self) -> str:
+        url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
+        data = {
+            "grant_type": "client_credentials",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret
+        }
+        res = requests.post(url, data=data, timeout=10)
+        res.raise_for_status()
+        return res.json().get("access_token")
 
-app = FastAPI(title="充電樁戰情室 Backend")
+    def fetch_raw_data(self):
+        headers = {"authorization": f"Bearer {self.token}"}
+        static_url = "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/ChargingStation/EV/Static?$format=JSON"
+        static_res = requests.get(static_url, headers=headers, timeout=20)
+        static_res.raise_for_status()
 
-# 允許跨域請求 (CORS)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+        dynamic_url = "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/ChargingStation/EV/Dynamic?$format=JSON"
+        dynamic_res = requests.get(dynamic_url, headers=headers, timeout=20)
+        dynamic_res.raise_for_status()
 
-# 🆕 掛載 data 資料夾，讓前端能直接用 http://localhost:8000/data/... 讀取 json
-os.makedirs("data", exist_ok=True)
-app.mount("/data", StaticFiles(directory="data"), name="data")
+        return static_res.json(), dynamic_res.json()
 
-class TdxRequest(BaseModel):
-    client_id: str
-    client_secret: str
+class EVDataProcessor:
+    CPO_MAPPING = {
+        "遠傳": "FET", "遠傳電信": "FET",
+        "源捷": "U-POWER", "旭電馳": "U-POWER", "u-power": "U-POWER",
+        "華城": "EVALUE", "華城電能": "EVALUE", "evalue": "EVALUE",
+        "特爾": "TAIL", "特爾電力": "TAIL", "tail": "TAIL",
+        "中興電工": "iCharging", "icharging": "iCharging",
+        "裕電": "YES", "裕電俥電": "YES"
+    }
 
-# 🆕 新增端點：觸發 TDX 管線
-@app.post("/sync_tdx")
-async def sync_tdx_data(req: TdxRequest):
-    try:
-        # 1. 抓取資料
-        ingestion = TDXIngestion(client_id=req.client_id, client_secret=req.client_secret)
-        raw_static, raw_dynamic = ingestion.fetch_raw_data()
-        
-        # 2. 清洗與去重
-        cleaned_data = EVDataProcessor.process_and_deduplicate(raw_static, raw_dynamic)
-        
-        # 3. 存入 DB 並輸出為 stations_live.json
-        mart = EVDatabaseMart("data/evcharge.db")
-        mart.save(cleaned_data)
-        mart.export_marts()
-        
-        return {"message": "✅ TDX 同步完成", "count": len(cleaned_data)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    @classmethod
+    def normalize_cpo(cls, raw_cpo: str) -> str:
+        if not raw_cpo: return "OTHER"
+        for key, std_name in cls.CPO_MAPPING.items():
+            if key in raw_cpo.lower(): return std_name
+        return raw_cpo.strip()
 
-# ... (保留您原本的 /analyze_log 和 /ingest_kb 端點) ...
+    @classmethod
+    def process_and_deduplicate(cls, static_raw: list, dynamic_raw: list) -> list:
+        live_status_map = {}
+        for d in dynamic_raw:
+            s_id = d.get("StationID")
+            statuses = [c.get("Status") for c in d.get("EVConnectorLiveStatus", []) if c.get("Status")]
+            if "Charging" in statuses: agg_status = "Charging"
+            elif "Available" in statuses: agg_status = "Available"
+            elif "Faulted" in statuses: agg_status = "Faulted"
+            else: agg_status = "Offline"
+            live_status_map[s_id] = agg_status
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        seen_stations = set()
+        clean_dataset = []
+
+        for st in static_raw:
+            station_id = st.get("StationID")
+            pos = st.get("StationPosition", {})
+            lat, lon = pos.get("PositionLat"), pos.get("PositionLon")
+            if not station_id or not lat or not lon or station_id in seen_stations:
+                continue
+
+            raw_cpo = st.get("OperatorName", {}).get("Zh_tw", "")
+            total_kw = sum(eq.get("EquipmentPower", 0) or 0 for eq in st.get("ChargingEquipments", []))
+            total_plugs = sum(eq.get("ConnectorCount", 0) or 0 for eq in st.get("ChargingEquipments", []))
+
+            clean_dataset.append({
+                "station_id": station_id,
+                "name": st.get("StationName", {}).get("Zh_tw", "未命名站點"),
+                "cpo": cls.normalize_cpo(raw_cpo),
+                "lat": round(float(lat), 6),
+                "lng": round(float(lon), 6),
+                "total_kw": total_kw,
+                "total_plugs": total_plugs,
+                "live_status": live_status_map.get(station_id, "Offline"),
+                "updated_at": datetime.now().isoformat()
+            })
+            seen_stations.add(station_id)
+
+        return clean_dataset
+
+class EVDatabaseMart:
+    def __init__(self, db_path="data/evcharge.db"):
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self.conn = sqlite3.connect(db_path)
+        with self.conn:
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS stations (
+                    station_id TEXT PRIMARY KEY, name TEXT, cpo TEXT, lat REAL, lng REAL, 
+                    total_kw REAL, total_plugs INTEGER, live_status TEXT, updated_at TEXT)
+            """)
+
+    def save(self, dataset: list):
+        with self.conn:
+            self.conn.executemany("""
+                INSERT OR REPLACE INTO stations 
+                VALUES (:station_id, :name, :cpo, :lat, :lng, :total_kw, :total_plugs, :live_status, :updated_at)
+            """, dataset)
+
+    def export_marts(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT station_id, name, cpo, lat, lng, total_kw, total_plugs, live_status FROM stations")
+        map_data = [
+            {"id": r[0], "name": r[1], "cpo": r[2], "lat": r[3], "lng": r[4], "total_kw": r[5], "total_plugs": r[6], "live_status": r[7]}
+            for r in cursor.fetchall()
+        ]
+        with open("data/stations_live.json", "w", encoding="utf-8") as f:
+            json.dump(map_data, f, ensure_ascii=False, indent=2)
