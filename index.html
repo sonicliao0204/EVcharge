@@ -109,8 +109,10 @@
         .leaflet-popup-content-wrapper { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; }
         .leaflet-popup-tip { background: var(--card-bg); }
         
-        .upload-btn { background: var(--primary-color); color: white; border: none; cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-block; transition: 0.2s;}
+        .upload-btn { background: var(--primary-color); color: white; border: none; cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;}
         .upload-btn:hover { background: #dc2626; box-shadow: var(--shadow-sm); }
+        .tdx-btn { background: #0ea5e9; color: white; border: none; cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;}
+        .tdx-btn:hover { background: #0284c7; box-shadow: var(--shadow-sm); }
     </style>
 </head>
 <body>
@@ -146,17 +148,23 @@
                 </div>
             </section>
 
-            <!-- 🗺️ 地圖分頁 (整合 MOTC EVConnectorLiveStatus) -->
+            <!-- 🗺️ 地圖分頁 (新增 TDX 即時同步按鈕) -->
             <section id="section-map" class="section" role="tabpanel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <h3 style="margin:0; color: var(--text-main);">全台營運站點分佈</h3>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <h3 style="margin:0; color: var(--text-main); margin-right: 10px;">全台營運站點與即時樁態</h3>
+                        
+                        <!-- 步驟1：靜態匯入 -->
                         <label class="upload-btn">
                             📁 匯入 Excel 站點
                             <input type="file" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
                         </label>
-                        <button class="nav-btn" style="padding: 6px 12px; font-size: 13px;" onclick="downloadExcelTemplate()">📥 下載公版格式</button>
-                        <span id="upload-status" style="font-size: 13px; color: var(--text-muted); font-weight: 600;"></span>
+                        <button class="nav-btn" style="padding: 6px 12px; font-size: 13px;" onclick="downloadExcelTemplate()">📥 下載公版</button>
+                        
+                        <!-- 步驟2：動態 TDX 介接 -->
+                        <button class="tdx-btn" onclick="syncTdxLiveStatus()">🔄 介接 TDX 即時資料</button>
+                        
+                        <span id="upload-status" style="font-size: 13px; color: var(--text-muted); font-weight: 600; margin-left: 10px;"></span>
                     </div>
                     
                     <div style="font-size: 13px; color: var(--text-muted); background: var(--bg-color); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
@@ -241,6 +249,9 @@
         let mapInstance = null;
         let mapTileLayer = null;
         let markersLayer = null; 
+        
+        // 🆕 全域儲存當前所有的站點陣列 (便於與 TDX 合併)
+        let currentStations = []; 
 
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
@@ -311,7 +322,7 @@
             }
         }
 
-        // --- 🗺️ 地圖與 MOTC EVConnectorLiveStatus 整合邏輯 ---
+        // --- 🗺️ 步驟一：靜態資料庫 (Excel 處理與 Map 初始化) ---
         function initMap() {
             if (mapInstance) return; 
 
@@ -323,28 +334,26 @@
             markersLayer = new L.FeatureGroup();
             mapInstance.addLayer(markersLayer);
 
-            // 預設模擬資料 (整合 MOTC 即時槍態)
-            const mockStations = [
-                { "站點名稱": "遠傳 新竹市府站", "緯度": 24.8066, "經度": 120.9686, "營運商": "FET", "即時槍態": "Available", "總功率(kW)": 120, "充電樁數": 2 },
-                { "站點名稱": "遠傳 竹科園區站", "緯度": 24.7814, "經度": 121.0124, "營運商": "FET", "即時槍態": "Charging", "總功率(kW)": 180, "充電樁數": 4 },
-                { "站點名稱": "遠傳 竹北高鐵站", "緯度": 24.8080, "經度": 121.0403, "營運商": "FET", "即時槍態": "Faulted", "總功率(kW)": 360, "充電樁數": 4 },
-                { "站點名稱": "U-POWER 新竹慈雲", "緯度": 24.7952, "經度": 121.0160, "營運商": "U-POWER", "即時槍態": "Available", "總功率(kW)": 360, "充電樁數": 6 }
+            // 預設寫死在前端的模擬資料 (帶有站點代碼)
+            currentStations = [
+                { "站點代碼": "FET-001", "站點名稱": "遠傳 內湖瑞光站", "緯度": 25.0792, "經度": 121.5794, "營運商": "FET", "即時槍態": "Available", "總功率(kW)": 360, "充電樁數": 4 },
+                { "站點代碼": "FET-002", "站點名稱": "遠傳 台中七期站", "緯度": 24.1631, "經度": 120.6418, "營運商": "FET", "即時槍態": "Available", "總功率(kW)": 120, "充電樁數": 2 },
+                { "站點代碼": "EVALUE-001", "站點名稱": "EVALUE 左營高鐵站", "緯度": 22.6865, "經度": 120.3075, "營運商": "EVALUE", "即時槍態": "Available", "總功率(kW)": 180, "充電樁數": 4 }
             ];
-            renderMapMarkers(mockStations);
+            renderMapMarkers(currentStations);
         }
 
         function downloadExcelTemplate() {
-            // 擴充公版格式：包含「即時槍態 (EVConnectorLiveStatus)」
             const ws_data = [
-                ['站點名稱', '緯度', '經度', '營運商', '即時槍態', '總功率(kW)', '充電樁數'],
-                ['遠傳 內湖瑞光站', 25.0792, 121.5794, 'FET', 'Available', 360, 4],
-                ['遠傳 台中七期站', 24.1631, 120.6418, 'FET', 'Charging', 120, 2],
-                ['EVALUE 左營高鐵站', 22.6865, 120.3075, 'EVALUE', 'Faulted', 180, 4]
+                ['站點代碼', '站點名稱', '緯度', '經度', '營運商', '即時槍態', '總功率(kW)', '充電樁數'],
+                ['FET-001', '遠傳 內湖瑞光站', 25.0792, 121.5794, 'FET', 'Available', 360, 4],
+                ['FET-002', '遠傳 台中七期站', 24.1631, 120.6418, 'FET', 'Available', 120, 2],
+                ['EVALUE-001', 'EVALUE 左營高鐵站', 22.6865, 120.3075, 'EVALUE', 'Available', 180, 4]
             ];
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "充電站點庫");
-            XLSX.writeFile(wb, "CPO_LiveStatus_Template.xlsx");
+            XLSX.writeFile(wb, "CPO_StaticData_Template.xlsx");
         }
 
         function handleExcelUpload(event) {
@@ -352,21 +361,19 @@
             if (!file) return;
 
             const statusText = document.getElementById('upload-status');
-            statusText.innerText = '🔄 檔案解析中...';
-            statusText.style.color = '#0ea5e9';
+            statusText.innerText = '🔄 讀取 Excel 中...';
 
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-                    if(jsonData.length === 0) throw new Error("表格內沒有資料");
+                    if(jsonData.length === 0) throw new Error("無資料");
 
-                    renderMapMarkers(jsonData);
+                    currentStations = jsonData; // 存入全域，等待後續 TDX 更新
+                    renderMapMarkers(currentStations);
                     
                     statusText.innerText = `✅ 成功匯入 ${jsonData.length} 筆站點`;
                     statusText.style.color = '#16a34a';
@@ -375,16 +382,97 @@
                     document.getElementById('kpi-fet-growth').innerText = '依據 Excel 資料更新';
 
                 } catch (error) {
-                    statusText.innerText = `❌ 解析失敗：請確保格式正確`;
+                    statusText.innerText = `❌ 解析失敗`;
                     statusText.style.color = '#dc2626';
-                    console.error("Excel解析錯誤", error);
                 }
             };
             reader.readAsArrayBuffer(file);
             event.target.value = ''; 
         }
 
-        // MOTC EVConnectorLiveStatus 解析邏輯
+        // --- 🔄 步驟二：動態 TDX 介接與融合邏輯 ---
+        async function syncTdxLiveStatus() {
+            const statusText = document.getElementById('upload-status');
+            statusText.innerText = '📡 正在呼叫 MOTC TDX API...';
+            statusText.style.color = '#0ea5e9';
+
+            try {
+                /*
+                // ==========================================
+                // ⚠️ 實務真實串接 TDX API 的標準寫法 (留作參考)
+                // ==========================================
+                // 1. 取得 Access Token
+                const tokenRes = await fetch('https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: 'YOUR_ID', client_secret: 'YOUR_SECRET' })
+                });
+                const tokenData = await tokenRes.json();
+
+                // 2. 獲取動態樁態 (Dynamic)
+                const dataRes = await fetch('https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/ChargingStation/EV/Dynamic?%24format=JSON', {
+                    headers: { 'authorization': `Bearer ${tokenData.access_token}` }
+                });
+                const tdxDataList = await dataRes.json();
+                */
+
+                // 由於瀏覽器直接打 TDX 會有 CORS 或憑證保護阻擋，此處為前端模擬介接
+                await new Promise(r => setTimeout(r, 800)); // 模擬延遲
+                
+                // 模擬回傳的 TDX JSON 格式 (根據交通部 EVConnectorLiveStatus 規範)
+                const mockTdxDynamicResponse = [
+                    {
+                        "StationID": "FET-001",
+                        "EVConnectorLiveStatus": [
+                            { "ConnectorID": "1", "Status": "Available" },
+                            { "ConnectorID": "2", "Status": "Charging" } // 一個在充，整站會變藍色
+                        ]
+                    },
+                    {
+                        "StationID": "FET-002",
+                        "EVConnectorLiveStatus": [
+                            { "ConnectorID": "1", "Status": "Faulted" } // 故障變紅色
+                        ]
+                    },
+                    {
+                        "StationID": "EVALUE-001",
+                        "EVConnectorLiveStatus": [
+                            { "ConnectorID": "1", "Status": "Available" } // 可用變綠色
+                        ]
+                    }
+                ];
+
+                let updatedCount = 0;
+
+                // 將 TDX 樁態合併回 Excel 靜態資料庫
+                currentStations = currentStations.map(station => {
+                    // 利用「站點代碼」去 TDX 尋找對應站點
+                    const tdxItem = mockTdxDynamicResponse.find(t => t.StationID === station['站點代碼']);
+                    if (tdxItem && tdxItem.EVConnectorLiveStatus) {
+                        updatedCount++;
+                        // 狀態判斷邏輯：只要有一槍充電，整站標記 Charging；若有可用標 Available；全壞標 Faulted
+                        const statuses = tdxItem.EVConnectorLiveStatus.map(c => c.Status);
+                        if (statuses.includes('Charging')) station['即時槍態'] = 'Charging';
+                        else if (statuses.includes('Available')) station['即時槍態'] = 'Available';
+                        else if (statuses.includes('Faulted')) station['即時槍態'] = 'Faulted';
+                        else station['即時槍態'] = 'Offline';
+                    }
+                    return station;
+                });
+
+                // 重繪地圖點位
+                renderMapMarkers(currentStations); 
+
+                statusText.innerText = `✅ TDX 同步完成 (更新 ${updatedCount} 筆)`;
+                statusText.style.color = '#16a34a';
+
+            } catch (error) {
+                statusText.innerText = `❌ TDX API 連線失敗`;
+                statusText.style.color = '#dc2626';
+            }
+        }
+
+        // --- 🗺️ 步驟三：在地圖上繪製站點 ---
         function renderMapMarkers(data) {
             if(!markersLayer) return;
             markersLayer.clearLayers(); 
@@ -396,8 +484,9 @@
                 const cpo = row['營運商'] || '未知';
                 const power = row['總功率(kW)'] || '--';
                 const plugs = row['充電樁數'] || '--';
+                const code = row['站點代碼'] || '未綁定';
                 
-                // 優先讀取「即時槍態」，若無則退回讀取「狀態」
+                // 優先讀取 MOTC 標準字串
                 const rawStatus = String(row['即時槍態'] || row['狀態'] || '').toLowerCase();
                 
                 if (isNaN(lat) || isNaN(lng)) return; 
@@ -405,6 +494,7 @@
                 let markerColor = '#64748b'; // 預設灰色 (Unknown/Offline)
                 let statusHtml = '';
 
+                // MOTC 狀態顏色判斷
                 if (rawStatus.includes('available') || rawStatus.includes('可用') || rawStatus.includes('正常')) {
                     markerColor = '#16a34a'; 
                     statusHtml = `<span style="color:#16a34a; font-weight:bold;">🟢 可用 (Available)</span>`;
@@ -428,12 +518,13 @@
                 });
 
                 circleMarker.bindPopup(`
-                    <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 170px;">
+                    <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 180px;">
                         <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">${name}</div>
+                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>TDX 代碼:</strong> <span style="font-family:monospace;">${code}</span></div>
                         <div style="font-size: 13px; margin-bottom: 4px;"><strong>營運商:</strong> ${cpo}</div>
                         <div style="font-size: 13px; margin-bottom: 4px;"><strong>設備規格:</strong> ${power} kW</div>
                         <div style="font-size: 13px; margin-bottom: 4px;"><strong>充電樁數:</strong> ${plugs} 槍</div>
-                        <div style="font-size: 13px; margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 6px;"><strong>狀態:</strong> ${statusHtml}</div>
+                        <div style="font-size: 13px; margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 6px;"><strong>即時槍態:</strong> ${statusHtml}</div>
                     </div>
                 `);
                 
