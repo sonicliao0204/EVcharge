@@ -151,10 +151,7 @@
                 </div>
             </section>
 
-            <!-- 🗺️ 地圖分頁 (整合 TDX API 認證區塊) -->
             <section id="section-map" class="section" role="tabpanel">
-                
-                <!-- 🆕 TDX 即時介接介面 -->
                 <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <span style="font-size: 14px; font-weight: 700; color: var(--text-main);">📡 TDX 即時介接：</span>
                     <input type="text" id="tdx-client-id" class="tdx-input" placeholder="輸入 TDX Client ID">
@@ -166,7 +163,6 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <h3 style="margin:0; color: var(--text-main); margin-right: 10px;">營運站點圖台</h3>
-                        <!-- 靜態匯入區 -->
                         <label class="upload-btn">
                             📁 本機 Excel 匯入
                             <input type="file" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
@@ -255,7 +251,6 @@
         let mapInstance = null;
         let mapTileLayer = null;
         let markersLayer = null; 
-        
         let currentStations = []; 
 
         function initTheme() {
@@ -327,11 +322,11 @@
             }
         }
 
-        // --- 🗺️ 地圖與資料處理邏輯 ---
+        // --- 🗺️ 地圖與 TDX 介接邏輯 ---
         function initMap() {
             if (mapInstance) return; 
 
-            mapInstance = L.map('station-map').setView([24.8, 121.0], 9);
+            mapInstance = L.map('station-map').setView([23.8, 120.9], 7); 
             mapTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap'
             }).addTo(mapInstance);
@@ -339,16 +334,22 @@
             markersLayer = new L.FeatureGroup();
             mapInstance.addLayer(markersLayer);
 
-            // 預設寫死在前端的模擬資料
-            currentStations = [
-                { "站點代碼": "FET-001", "站點名稱": "遠傳 內湖瑞光站", "緯度": 25.0792, "經度": 121.5794, "營運商": "FET", "即時槍態": "Available", "總功率(kW)": 360, "充電樁數": 4 },
-                { "站點代碼": "FET-002", "站點名稱": "遠傳 台中七期站", "緯度": 24.1631, "經度": 120.6418, "營運商": "FET", "即時槍態": "Charging", "總功率(kW)": 120, "充電樁數": 2 },
-                { "站點代碼": "EVALUE-001", "站點名稱": "EVALUE 左營高鐵站", "緯度": 22.6865, "經度": 120.3075, "營運商": "EVALUE", "即時槍態": "Available", "總功率(kW)": 180, "充電樁數": 4 }
-            ];
-            renderMapMarkers(currentStations);
+            // 啟動時先嘗試載入後端管線的 JSON
+            fetch('http://localhost:8000/data/stations_live.json')
+                .then(res => {
+                    if(!res.ok) throw new Error('尚未同步資料');
+                    return res.json();
+                })
+                .then(data => {
+                    currentStations = data;
+                    renderMapMarkers(currentStations);
+                })
+                .catch(err => {
+                    console.log("地圖暫無資料，請先執行 TDX 同步", err);
+                    document.getElementById('tdx-status').innerText = '💡 請輸入 API Key 執行 TDX 同步';
+                });
         }
 
-        // 🆕 直接呼叫 MOTC TDX API
         async function syncTdxLiveStatus() {
             const clientId = document.getElementById('tdx-client-id').value.trim();
             const clientSecret = document.getElementById('tdx-client-secret').value.trim();
@@ -360,83 +361,31 @@
                 return;
             }
 
-            statusText.innerText = '📡 [1/3] 取得 TDX 授權中...';
+            statusText.innerText = '📡 後端爬蟲正在從交通部拉取全台資料，請稍候...';
             statusText.style.color = '#0ea5e9';
 
             try {
-                // 1. OAuth 2.0 取得 Token
-                const tokenRes = await fetch('https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token', {
+                const response = await fetch('http://localhost:8000/sync_tdx', {
                     method: 'POST',
-                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret })
-                });
-                
-                if(!tokenRes.ok) throw new Error('授權失敗，請檢查 API Keys');
-                const tokenData = await tokenRes.json();
-                const token = tokenData.access_token;
-
-                // 2. 獲取靜態建站資料 (全台 Static)
-                statusText.innerText = '📡 [2/3] 下載全台站點 (Static)...';
-                const staticRes = await fetch('https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/ChargingStation/EV/Static?%24format=JSON', {
-                    headers: { 'authorization': `Bearer ${token}` }
-                });
-                const staticData = await staticRes.json();
-
-                // 3. 獲取動態即時槍態 (全台 Dynamic)
-                statusText.innerText = '📡 [3/3] 下載即時槍態 (Dynamic)...';
-                const dynRes = await fetch('https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/ChargingStation/EV/Dynamic?%24format=JSON', {
-                    headers: { 'authorization': `Bearer ${token}` }
-                });
-                const dynData = await dynRes.json();
-
-                statusText.innerText = '⚙️ 運算融合中...';
-
-                // 效能優化：將動態陣列轉換為 Map O(1) 尋找
-                let dynMap = new Map();
-                dynData.forEach(d => dynMap.set(d.StationID, d));
-
-                // 4. 融合資料
-                let tdxStations = [];
-                staticData.forEach(st => {
-                    let cpo = st.OperatorName?.Zh_tw || '未知營運商';
-                    let totalKw = 0;
-                    let totalPlugs = 0;
-                    if(st.ChargingEquipments) {
-                        st.ChargingEquipments.forEach(eq => {
-                            totalKw += (eq.EquipmentPower || 0);
-                            totalPlugs += (eq.ConnectorCount || 0);
-                        });
-                    }
-                    
-                    let dynItem = dynMap.get(st.StationID);
-                    let currentStatus = 'Offline';
-                    if(dynItem && dynItem.EVConnectorLiveStatus) {
-                        let statuses = dynItem.EVConnectorLiveStatus.map(c => c.Status);
-                        if (statuses.includes('Charging')) currentStatus = 'Charging';
-                        else if (statuses.includes('Available')) currentStatus = 'Available';
-                        else if (statuses.includes('Faulted')) currentStatus = 'Faulted';
-                    }
-
-                    tdxStations.push({
-                        "站點代碼": st.StationID,
-                        "站點名稱": st.StationName?.Zh_tw || '未命名',
-                        "緯度": st.StationPosition.PositionLat,
-                        "經度": st.StationPosition.PositionLon,
-                        "營運商": cpo,
-                        "總功率(kW)": totalKw,
-                        "充電樁數": totalPlugs,
-                        "即時槍態": currentStatus
-                    });
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret })
                 });
 
-                currentStations = tdxStations;
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || '伺服器錯誤');
+                }
+
+                const result = await response.json();
+
+                const dataRes = await fetch('http://localhost:8000/data/stations_live.json');
+                currentStations = await dataRes.json();
                 renderMapMarkers(currentStations);
 
-                statusText.innerText = `✅ TDX 同步完成 (共 ${currentStations.length} 站)`;
+                statusText.innerText = `✅ ${result.message} (共 ${result.count} 站)`;
                 statusText.style.color = '#16a34a';
 
-                document.getElementById('kpi-fet-stations').innerText = currentStations.length + ' 站 (全台)';
-                document.getElementById('kpi-fet-growth').innerText = '來自 TDX API';
+                document.getElementById('kpi-fet-stations').innerText = result.count + ' 站 (全台)';
 
             } catch (error) {
                 console.error(error);
@@ -492,21 +441,21 @@
             event.target.value = ''; 
         }
 
-        // 畫點邏輯
         function renderMapMarkers(data) {
             if(!markersLayer) return;
             markersLayer.clearLayers(); 
 
             data.forEach(row => {
-                const name = row['站點名稱'] || '未知站點';
-                const lat = parseFloat(row['緯度']);
-                const lng = parseFloat(row['經度']);
-                const cpo = row['營運商'] || '未知';
-                const power = row['總功率(kW)'] || '--';
-                const plugs = row['充電樁數'] || '--';
-                const code = row['站點代碼'] || '未綁定';
+                // 相容後端 JSON 欄位與 Excel 中文欄位
+                const name = row.name || row['站點名稱'] || '未知站點';
+                const lat = parseFloat(row.lat || row['緯度']);
+                const lng = parseFloat(row.lng || row['經度']);
+                const cpo = row.cpo || row['營運商'] || '未知';
+                const power = row.total_kw || row['總功率(kW)'] || '--';
+                const plugs = row.total_plugs || row['充電樁數'] || '--';
+                const code = row.id || row.station_id || row['站點代碼'] || '未綁定';
                 
-                const rawStatus = String(row['即時槍態'] || row['狀態'] || '').toLowerCase();
+                const rawStatus = String(row.status || row.live_status || row['即時槍態'] || row['狀態'] || '').toLowerCase();
                 
                 if (isNaN(lat) || isNaN(lng)) return; 
 
@@ -527,10 +476,10 @@
                 }
 
                 const circleMarker = L.circleMarker([lat, lng], {
-                    radius: 7,
+                    radius: 6,
                     fillColor: markerColor,
                     color: '#ffffff',
-                    weight: 2,
+                    weight: 1.5,
                     opacity: 1,
                     fillOpacity: 0.9
                 });
