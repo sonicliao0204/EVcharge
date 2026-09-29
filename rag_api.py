@@ -9,6 +9,7 @@ from tdx_pipeline import TDXIngestion, EVDataProcessor, EVDatabaseMart
 
 app = FastAPI(title="充電樁戰情室 Backend")
 
+# 允許跨域請求 (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,6 +22,7 @@ app.add_middleware(
 os.makedirs("data", exist_ok=True)
 app.mount("/data", StaticFiles(directory="data"), name="data")
 
+# 定義前端傳來的資料格式
 class TdxRequest(BaseModel):
     client_id: str
     client_secret: str
@@ -28,6 +30,7 @@ class TdxRequest(BaseModel):
 class LogRequest(BaseModel):
     log_content: str
 
+# 🆕 這是讓 TDX 按鈕可以呼叫的新路徑
 @app.post("/sync_tdx")
 async def sync_tdx_data(req: TdxRequest):
     try:
@@ -36,6 +39,7 @@ async def sync_tdx_data(req: TdxRequest):
         raw_static, raw_dynamic = ingestion.fetch_raw_data()
         cleaned_data = EVDataProcessor.process_and_deduplicate(raw_static, raw_dynamic)
         
+        # 存入資料庫並產出 JSON
         mart = EVDatabaseMart("data/evcharge.db")
         mart.save(cleaned_data)
         mart.export_marts()
@@ -44,6 +48,7 @@ async def sync_tdx_data(req: TdxRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# 這是原本的 AI 診斷路徑
 @app.post("/analyze_log")
 async def analyze_log(req: LogRequest):
     return {"diagnosis_html": "<strong>API 接收成功！</strong><br>此為後端 RAG 回傳測試。"}
