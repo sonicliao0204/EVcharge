@@ -17,6 +17,8 @@
     
     <!-- 載入 Leaflet 地圖套件 CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- 🆕 載入 SheetJS (用於前端解析 Excel 檔案) -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <style>
         :root { 
@@ -34,9 +36,7 @@
         }
 
         /* 讓標準 OSM 地圖在深色模式下自動反轉為科技深色 */
-        [data-theme="dark"] .leaflet-tile-pane {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-        }
+        [data-theme="dark"] .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
 
         .skip-link { position: absolute; top: -40px; left: 0; background: #000; color: white; padding: 8px; z-index: 10000; transition: top 0.2s; }
         .skip-link:focus { top: 0; }
@@ -52,7 +52,7 @@
         
         .last-update { font-size: 13px; color: var(--text-muted); background: var(--card-bg); padding: 8px 16px; border-radius: 30px; font-weight: 500; border: 1px solid var(--border-color); }
         .main-nav { display: inline-flex; background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 16px; gap: 6px; margin-bottom: 25px; flex-wrap: wrap; }
-        .nav-btn { min-width: 110px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.3s; }
+        .nav-btn { min-width: 110px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 6px;}
         .nav-btn:hover { background: var(--btn-hover); color: var(--text-main); }
         .nav-btn.active { background: var(--bg-color); color: var(--primary-color); box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);}
         
@@ -107,9 +107,12 @@
         .btn-analyze { background: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-analyze:hover { background: #dc2626; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
         
-        /* 地圖 Popup 樣式 (適應深色模式) */
         .leaflet-popup-content-wrapper { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; }
         .leaflet-popup-tip { background: var(--card-bg); }
+        
+        /* 🆕 檔案上傳按鈕樣式 */
+        .upload-btn { background: var(--primary-color); color: white; border: none; cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-block; transition: 0.2s;}
+        .upload-btn:hover { background: #dc2626; box-shadow: var(--shadow-sm); }
     </style>
 </head>
 <body>
@@ -138,16 +141,27 @@
             <section id="section-overview" class="section active" role="tabpanel">
                 <h3 style="margin-top:0; color: var(--text-main);">內部營運與全台 CPO 核心指標</h3>
                 <div class="kpi-grid">
-                    <div class="kpi-card"><div class="kpi-title">遠傳站點數</div><div class="kpi-value skeleton" id="kpi-fet-stations">00 站</div><div class="kpi-desc" id="kpi-fet-growth">--</div></div>
+                    <div class="kpi-card"><div class="kpi-title">營運中站點數</div><div class="kpi-value skeleton" id="kpi-fet-stations">00 站</div><div class="kpi-desc" id="kpi-fet-growth">--</div></div>
                     <div class="kpi-card"><div class="kpi-title">市場最低尖峰費率</div><div class="kpi-value skeleton" id="kpi-lowest-rate">$00.0</div><div class="kpi-desc" id="kpi-lowest-cpo">--</div></div>
                     <div class="kpi-card"><div class="kpi-title">今日情報數</div><div class="kpi-value skeleton" id="kpi-news-count">00 筆</div><div class="kpi-desc">--</div></div>
                     <div class="kpi-card"><div class="kpi-title">妥善率 (OCPP)</div><div class="kpi-value skeleton" id="kpi-ocpp">00.0%</div><div class="kpi-desc" id="kpi-ocpp-status">--</div></div>
                 </div>
             </section>
 
+            <!-- 🗺️ 地圖分頁 (新增 Excel 匯入控制列) -->
             <section id="section-map" class="section" role="tabpanel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <h3 style="margin:0; color: var(--text-main);">全台營運站點分佈概況</h3>
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <h3 style="margin:0; color: var(--text-main);">全台營運站點分佈</h3>
+                        <!-- 🆕 Excel 上傳與下載範本按鈕 -->
+                        <label class="upload-btn">
+                            📁 匯入 Excel 站點
+                            <input type="file" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                        </label>
+                        <button class="nav-btn" style="padding: 6px 12px; font-size: 13px;" onclick="downloadExcelTemplate()">📥 下載公版格式</button>
+                        <span id="upload-status" style="font-size: 13px; color: var(--text-muted); font-weight: 600;"></span>
+                    </div>
+                    
                     <div style="font-size: 13px; color: var(--text-muted); background: var(--bg-color); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
                         <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16a34a; margin-right:4px;"></span> 正常營運
                         <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc2626; margin-left:10px; margin-right:4px;"></span> 離線 / 異常
@@ -225,8 +239,10 @@
         let techKbData = [];
         let trendChartInstance = null;
         let isChartJsLoaded = false;
+        
         let mapInstance = null;
         let mapTileLayer = null;
+        let markersLayer = null; // 🆕 用於管理與清除圖標圖層
 
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
@@ -297,53 +313,134 @@
             }
         }
 
+        // --- 🗺️ 地圖與 Excel 解析邏輯 ---
         function initMap() {
             if (mapInstance) return; 
 
             mapInstance = L.map('station-map').setView([24.8, 121.0], 9);
-            
-            // 使用完全免費的標準 OSM 圖磚，並靠 CSS Filter 實現深色模式
             mapTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap'
             }).addTo(mapInstance);
 
-            const mockStations = [
-                { name: "遠傳 新竹市府站", lat: 24.8066, lng: 120.9686, cpo: "FET", status: "online", power: "120kW DC" },
-                { name: "遠傳 竹科園區站", lat: 24.7814, lng: 121.0124, cpo: "FET", status: "online", power: "180kW DC" },
-                { name: "遠傳 竹北高鐵站", lat: 24.8080, lng: 121.0403, cpo: "FET", status: "offline", power: "360kW DC" }, 
-                { name: "遠傳 桃園青埔站", lat: 25.0130, lng: 121.2140, cpo: "FET", status: "online", power: "180kW DC" },
-                { name: "遠傳 台北遠企站", lat: 25.0263, lng: 121.5494, cpo: "FET", status: "online", power: "360kW DC" },
-                { name: "U-POWER 新竹慈雲", lat: 24.7952, lng: 121.0160, cpo: "U-POWER", status: "online", power: "360kW DC" },
-                { name: "EVALUE 新竹巨城", lat: 24.8090, lng: 120.9740, cpo: "EVALUE", status: "online", power: "120kW DC" }
-            ];
+            // 建立圖層群組，方便後續清除與重新渲染
+            markersLayer = new L.FeatureGroup();
+            mapInstance.addLayer(markersLayer);
 
-            mockStations.forEach(station => {
-                const isOnline = station.status === 'online';
-                const markerColor = isOnline ? '#16a34a' : '#dc2626'; 
-                
-                const circleMarker = L.circleMarker([station.lat, station.lng], {
+            // 載入預設模擬資料
+            const mockStations = [
+                { "站點名稱": "遠傳 新竹市府站", "緯度": 24.8066, "經度": 120.9686, "營運商": "FET", "狀態": "正常", "總功率(kW)": 120, "充電樁數": 2 },
+                { "站點名稱": "遠傳 竹北高鐵站", "緯度": 24.8080, "經度": 121.0403, "營運商": "FET", "狀態": "異常", "總功率(kW)": 360, "充電樁數": 4 },
+                { "站點名稱": "U-POWER 新竹慈雲", "緯度": 24.7952, "經度": 121.0160, "營運商": "U-POWER", "狀態": "正常", "總功率(kW)": 360, "充電樁數": 6 }
+            ];
+            renderMapMarkers(mockStations);
+        }
+
+        // 🆕 下載公版 Excel 格式
+        function downloadExcelTemplate() {
+            const ws_data = [
+                ['站點名稱', '緯度', '經度', '營運商', '狀態', '總功率(kW)', '充電樁數'],
+                ['遠傳 內湖瑞光站', 25.0792, 121.5794, 'FET', '正常', 360, 4],
+                ['遠傳 台中七期站', 24.1631, 120.6418, 'FET', '異常', 120, 2],
+                ['EVALUE 左營高鐵站', 22.6865, 120.3075, 'EVALUE', '正常', 180, 4]
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "充電站點庫");
+            XLSX.writeFile(wb, "CPO_Stations_Template.xlsx");
+        }
+
+        // 🆕 處理前端 Excel 檔案上傳
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusText = document.getElementById('upload-status');
+            statusText.innerText = '🔄 檔案解析中...';
+            statusText.style.color = '#0ea5e9';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    if(jsonData.length === 0) throw new Error("表格內沒有資料");
+
+                    renderMapMarkers(jsonData);
+                    
+                    statusText.innerText = `✅ 成功匯入 ${jsonData.length} 筆站點`;
+                    statusText.style.color = '#16a34a';
+
+                    // 同步更新首頁 KPI 數字
+                    document.getElementById('kpi-fet-stations').innerText = jsonData.length + ' 站';
+                    document.getElementById('kpi-fet-growth').innerText = '依據 Excel 資料更新';
+
+                } catch (error) {
+                    statusText.innerText = `❌ 解析失敗：請確保格式正確`;
+                    statusText.style.color = '#dc2626';
+                    console.error("Excel解析錯誤", error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = ''; // 清除 input 值以允許重複上傳相同檔案
+        }
+
+        // 🆕 將 JSON 資料渲染為地圖上的圓點
+        function renderMapMarkers(data) {
+            if(!markersLayer) return;
+            markersLayer.clearLayers(); // 清除舊圖標
+
+            data.forEach(row => {
+                const name = row['站點名稱'] || '未知站點';
+                const lat = parseFloat(row['緯度']);
+                const lng = parseFloat(row['經度']);
+                const cpo = row['營運商'] || '未知';
+                const rawStatus = String(row['狀態'] || '').toLowerCase();
+                // 只要包含「正常」或是 online 就算運作中
+                const isOnline = rawStatus.includes('正常') || rawStatus === 'online';
+                const power = row['總功率(kW)'] || '--';
+                const plugs = row['充電樁數'] || '--';
+
+                if (isNaN(lat) || isNaN(lng)) return; // 略過無效座標
+
+                const markerColor = isOnline ? '#16a34a' : '#dc2626';
+
+                const circleMarker = L.circleMarker([lat, lng], {
                     radius: 8,
                     fillColor: markerColor,
                     color: '#ffffff',
                     weight: 2,
                     opacity: 1,
                     fillOpacity: 0.9
-                }).addTo(mapInstance);
-                
+                });
+
                 const statusHtml = isOnline ? 
                     `<span style="color:#16a34a; font-weight:bold;">🟢 正常營運</span>` : 
                     `<span style="color:#dc2626; font-weight:bold;">🔴 OCPP 斷線/異常</span>`;
 
                 circleMarker.bindPopup(`
-                    <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 160px;">
-                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">${station.name}</div>
-                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>營運商:</strong> ${station.cpo}</div>
-                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>設備規格:</strong> ${station.power}</div>
-                        <div style="font-size: 13px; margin-top: 8px;"><strong>狀態:</strong> ${statusHtml}</div>
+                    <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 170px;">
+                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">${name}</div>
+                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>營運商:</strong> ${cpo}</div>
+                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>設備規格:</strong> ${power} kW</div>
+                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>充電樁數:</strong> ${plugs} 槍</div>
+                        <div style="font-size: 13px; margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 6px;"><strong>狀態:</strong> ${statusHtml}</div>
                     </div>
                 `);
+                
+                markersLayer.addLayer(circleMarker);
             });
+            
+            // 自動調整地圖視角以包含所有標記
+            if(markersLayer.getLayers().length > 0) {
+                const bounds = markersLayer.getBounds();
+                mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+            }
         }
+        // ------------------------------------
 
         function loadChartJsAndRender() {
             if (isChartJsLoaded) { renderTrendChart(); return; }
