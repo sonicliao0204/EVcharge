@@ -84,6 +84,7 @@
         .spec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
         .spec-tag { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: var(--bg-color); color: var(--text-muted); font-weight: 600; border: 1px solid var(--border-color);}
 
+        /* 各家業者配色 */
         .cpo-gov { background: #334155; color: #fff; border: 1px solid #1e293b; } 
         .cpo-fet { background: #dc2626; color: #fff; border: 1px solid #b91c1c; }
         .cpo-evalue { background: #16a34a; color: #fff; border: 1px solid #15803d; }
@@ -91,7 +92,7 @@
         .cpo-icharging { background: #ea580c; color: #fff; border: 1px solid #c2410c; }
         .cpo-tail { background: #0891b2; color: #fff; border: 1px solid #0e7490; }
         .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
-        .cpo-evoasis { background: #10b981; color: #fff; border: 1px solid #059669; } /* 🆕 EVOASIS 專屬配色 */
+        .cpo-evoasis { background: #10b981; color: #fff; border: 1px solid #059669; } /* EVOASIS 專屬配色 */
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
         .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; }
@@ -362,7 +363,7 @@
             const statusText = document.getElementById('tdx-status');
 
             if (!clientId || !clientSecret) {
-                statusText.innerText = '⚠️️ 請填寫 Client ID 與 Secret';
+                statusText.innerText = '⚠️ 請填寫 Client ID 與 Secret';
                 statusText.style.color = '#ea580c';
                 return;
             }
@@ -509,12 +510,55 @@
             }
         }
 
+        // --- 📈 趨勢分析 (包含模擬歷史資料與 EVOASIS) ---
         function loadChartJsAndRender() {
             if (isChartJsLoaded) { renderTrendChart(); return; }
             const script = document.createElement('script');
             script.src = "https://cdn.jsdelivr.net/npm/chart.js";
             script.onload = () => { isChartJsLoaded = true; renderTrendChart(); };
             document.head.appendChild(script);
+        }
+
+        function renderTrendChart() {
+            // 先嘗試讀取後端的歷史 json 檔案，若無則啟用帶有 EVOASIS 的模擬數據
+            fetchData('data/price_history.json', data => {
+                drawChart(data);
+            }, () => {
+                console.log('載入模擬趨勢數據 (包含 EVOASIS)');
+                const mockData = {
+                    labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月'],
+                    datasets: {
+                        'FET': [10, 15, 22, 35, 42, 50, 58, 62, 65],
+                        'EVOASIS': [30, 42, 55, 70, 85, 105, 120, 135, 150], // 新增 EVOASIS
+                        'U-POWER': [20, 25, 32, 40, 48, 55, 65, 75, 80],
+                        'EVALUE': [40, 42, 45, 48, 50, 52, 55, 58, 60],
+                        'TAIL': [15, 18, 20, 25, 30, 35, 38, 42, 45]
+                    }
+                };
+                drawChart(mockData);
+            });
+
+            function drawChart(data) {
+                const ctx = document.getElementById('expansionChart').getContext('2d');
+                if(trendChartInstance) trendChartInstance.destroy();
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+                
+                trendChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            { label: '遠傳 (FET)', data: data.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+                            { label: 'EVOASIS', data: data.datasets['EVOASIS'], borderColor: '#10b981', tension: 0.3 }, // 繪製 EVOASIS 折線
+                            { label: 'U-POWER', data: data.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 },
+                            { label: 'EVALUE', data: data.datasets['EVALUE'], borderColor: '#16a34a', tension: 0.3 },
+                            { label: 'TAIL', data: data.datasets['TAIL'], borderColor: '#0891b2', borderDash: [5, 5], tension: 0.3 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
         }
 
         function populateKpis(data) {
@@ -530,17 +574,17 @@
             populateKpis({fet_stations: 65, fet_growth_rate: "靜態展示模式", lowest_peak_rate: 10.9, lowest_peak_cpo: "遠傳 (基準)", ocpp_availability: 99.4});
         }
 
-        // 🆕 防禦性設計：確保情報牆一定有 EVOASIS 的新聞
+        // --- 📡 情報牆 (防禦性寫入 EVOASIS) ---
         function setupNews(data) {
             allNewsData = data;
             
-            // 檢查 JSON 裡面有沒有 EVOASIS 的新聞，沒有就強制加一條進去
+            // 防禦：檢查 JSON 裡面有沒有 EVOASIS 的新聞，沒有就強制加一條
             const hasEvoasis = allNewsData.some(item => item.cpo === 'EVOASIS');
             if (!hasEvoasis) {
                 allNewsData.unshift({
                     "date": new Date().toISOString().split('T')[0],
                     "cpo": "EVOASIS",
-                    "title": "[新站啟用|優惠] EVOASIS 桃園青埔超充站上線，限時星晴電價每度 6.5 元",
+                    "title": "[新站啟用|優惠] EVOASIS 桃園青埔超級快充站上線，限時星晴電價每度 6.5 元",
                     "url": "https://www.evoasis.com.tw/"
                 });
             }
@@ -549,7 +593,7 @@
             
             const cpos = [...new Set(allNewsData.map(item => item.cpo))];
             const select = document.getElementById('news-cpo-filter');
-            select.innerHTML = '<option value="all">所有來源</option>'; // 清空重置
+            select.innerHTML = '<option value="all">所有來源</option>';
             cpos.forEach(cpo => {
                 let opt = document.createElement('option');
                 opt.value = cpo; opt.text = cpo;
@@ -559,7 +603,6 @@
         }
 
         function fallbackNews() {
-            // 如果連 JSON 檔案都沒有，就給予這組預設情報
             setupNews([
                 {"date": "2026-10-01", "cpo": "FET", "title": "[政策] 遠傳電信得標新竹市公有停車場充電樁 BOT 案", "url": "#"},
                 {"date": "2026-09-28", "cpo": "EVOASIS", "title": "[新站啟用|優惠] EVOASIS 桃園青埔超級快充站上線，限時星晴電價每度 6.5 元", "url": "https://www.evoasis.com.tw/"},
@@ -609,17 +652,16 @@
             container.innerHTML = html;
         }
 
-        // 🆕 防禦性設計：確保費率矩陣一定有 EVOASIS
+        // --- 💰 費率與競品分析 (防禦性寫入 EVOASIS) ---
         function setupPricing(data) {
             cpoPricingData = data;
             
-            // 檢查 JSON 裡面有沒有 EVOASIS 的定價，沒有就強制加一條進去，以免跑出 0 元
+            // 防禦：檢查 JSON 裡面有沒有 EVOASIS，沒有就強制補上預設費率
             if (!cpoPricingData['EVOASIS']) {
                 cpoPricingData['EVOASIS'] = {
                     'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21
                 };
             }
-            
             buildRateTabs();
         }
 
@@ -656,6 +698,7 @@
             document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
             document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
             
+            // 將 EVOASIS 加入比價運算陣列中
             const cposForCompare = ['FET', 'EVALUE', 'EVOASIS', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
             if(Object.keys(cpoPricingData).length === 0) return;
 
@@ -708,29 +751,6 @@
                 html += `</tr>`;
             }
             document.getElementById('rate-tbody').innerHTML = html;
-        }
-
-        function renderTrendChart() {
-            fetchData('data/price_history.json', data => {
-                const ctx = document.getElementById('expansionChart').getContext('2d');
-                if(trendChartInstance) trendChartInstance.destroy();
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-                
-                trendChartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [
-                            { label: '遠傳 (FET)', data: data.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                            { label: 'U-POWER', data: data.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 },
-                            { label: 'EVALUE', data: data.datasets['EVALUE'], borderColor: '#16a34a', tension: 0.3 },
-                            { label: 'TAIL', data: data.datasets['TAIL'], borderColor: '#0891b2', borderDash: [5, 5], tension: 0.3 }
-                        ]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }, () => console.log('趨勢圖表無資料'));
         }
 
         async function analyzeOcppLog() {
