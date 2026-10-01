@@ -3,854 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="台灣充電情報戰情室 V2.2 - 提供全台電動車充電樁 CPO 費率分析、營運概況與 OCPP 智慧診斷">
-    <meta property="og:title" content="⚡ 台灣充電情報戰情室 V2.2 企業版">
-    <meta property="og:description" content="即時監控 CPO 站點與費率，內建 OCPP Log AI 診斷引擎。">
-    <meta name="theme-color" content="#f8fafc" id="theme-color-meta">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
-    
-    <title>⚡ 台灣充電情報戰情室 V2.2 企業版</title>
+    <meta name="description" content="台灣充電情報戰情室 V3.0 - PlugShare 企業版">
+    <title>⚡ 台灣充電情報戰情室 V3.0 企業版</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- 載入 Leaflet 地圖套件 CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- 載入 SheetJS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <style>
         :root { 
             --bg-color: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --card-bg: #ffffff; 
             --primary-color: #ef4444; --border-color: #e2e8f0; --btn-hover: #f1f5f9;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-            --radius-md: 12px; --radius-lg: 20px;
+            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.05); --radius-md: 12px; --radius-lg: 20px;
         }
         [data-theme="dark"] {
             --bg-color: #0f172a; --text-main: #f8fafc; --text-muted: #94a3b8; --card-bg: #1e293b; 
             --border-color: #334155; --btn-hover: #334155;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
-            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5);
         }
-
         [data-theme="dark"] .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
 
-        .skip-link { position: absolute; top: -40px; left: 0; background: #000; color: white; padding: 8px; z-index: 10000; transition: top 0.2s; }
-        .skip-link:focus { top: 0; }
-        *:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
-
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; transition: background-color 0.3s, color 0.3s; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
         .dashboard { width: 100%; max-width: 1200px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); flex-wrap: wrap; gap: 15px;}
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); }
         .header h1 { margin: 0; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 12px; }
-        .header-actions { display: flex; gap: 10px; align-items: center; }
-        .theme-toggle { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 40px; height: 40px; cursor: pointer; color: var(--text-main); font-size: 18px; transition: 0.2s; }
-        .theme-toggle:hover { background: var(--btn-hover); }
-        
-        .last-update { font-size: 13px; color: var(--text-muted); background: var(--card-bg); padding: 8px 16px; border-radius: 30px; font-weight: 500; border: 1px solid var(--border-color); }
-        .main-nav { display: inline-flex; background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 16px; gap: 6px; margin-bottom: 25px; flex-wrap: wrap; }
-        .nav-btn { min-width: 110px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 6px;}
-        .nav-btn:hover { background: var(--btn-hover); color: var(--text-main); }
-        .nav-btn.active { background: var(--bg-color); color: var(--primary-color); box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);}
-        
-        .section { display: none; background: var(--card-bg); padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); animation: fadeIn 0.3s ease-out forwards; }
+        .main-nav { display: flex; background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 16px; gap: 6px; margin-bottom: 25px; flex-wrap: wrap; }
+        .nav-btn { min-width: 110px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); }
+        .nav-btn.active { background: var(--bg-color); color: var(--primary-color); border: 1px solid var(--border-color);}
+        .section { display: none; background: var(--card-bg); padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
         .section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-        .skeleton { background: linear-gradient(90deg, var(--btn-hover) 25%, var(--border-color) 50%, var(--btn-hover) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 4px; color: transparent !important; user-select: none; }
-        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
+        
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .kpi-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; position: relative; overflow: hidden; }
-        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary-color); }
-        .kpi-title { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
-        .kpi-value { font-size: 26px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .kpi-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; border-left: 4px solid var(--primary-color); }
+        .kpi-title { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+        .kpi-value { font-size: 26px; font-weight: 800; color: var(--text-main); }
         .kpi-desc { font-size: 12px; color: #16a34a; margin-top: 6px; font-weight: 600; }
 
-        .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .search-input { flex: 1; min-width: 200px; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); }
-        .cpo-select { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); }
-
-        .news-list { display: flex; flex-direction: column; gap: 12px; }
-        .news-card { display: flex; align-items: center; gap: 15px; padding: 15px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--card-bg); transition: 0.2s; flex-wrap: wrap;}
-        .news-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--text-muted); }
-        .news-cpo { flex-shrink: 0; width: 100px; text-align: center; padding: 4px 0; border-radius: 6px; font-weight: 700; font-size: 12px; }
-        .news-content { flex-grow: 1; min-width: 250px;}
-        .news-link { text-decoration: none; color: var(--text-main); font-size: 15px; font-weight: 700; display: block; margin-bottom: 6px; }
-        .news-link:hover { color: var(--primary-color); text-decoration: underline; }
-        .news-date { flex-shrink: 0; color: var(--text-muted); font-size: 12px; text-align: right; }
-        .spec-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-        .spec-tag { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: var(--bg-color); color: var(--text-muted); font-weight: 600; border: 1px solid var(--border-color);}
-
-        /* 各家業者配色 */
-        .cpo-gov { background: #334155; color: #fff; border: 1px solid #1e293b; } 
-        .cpo-fet { background: #dc2626; color: #fff; border: 1px solid #b91c1c; }
-        .cpo-evalue { background: #16a34a; color: #fff; border: 1px solid #15803d; }
-        .cpo-upower { background: #0284c7; color: #fff; border: 1px solid #0369a1; }
-        .cpo-icharging { background: #ea580c; color: #fff; border: 1px solid #c2410c; }
-        .cpo-tail { background: #0891b2; color: #fff; border: 1px solid #0e7490; }
-        .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
-        .cpo-evoasis { background: #10b981; color: #fff; border: 1px solid #059669; }
-
-        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+        .sync-btn { background: #8b5cf6; color: white; border: none; cursor: pointer; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; transition: 0.2s;}
+        .sync-btn:hover { background: #7c3aed; }
+        
         .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; }
-        .data-table th, .data-table td { padding: 12px 10px; font-size: 14px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
-        .data-table th { background: var(--bg-color); color: var(--text-muted); font-weight: 700; font-size: 12px; text-transform: uppercase; }
-        .time-col { background: var(--card-bg); color: var(--text-muted); font-weight: 600; width: 75px; position: sticky; left: 0; z-index: 2;}
-        
-        .ai-suggest-col { background: #fefce8 !important; border-left: 2px solid #ca8a04 !important; }
-        [data-theme="dark"] .ai-suggest-col { background: #422006 !important; border-left: 2px solid #a16207 !important; }
-
-        .log-textarea { width: 100%; height: 140px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 15px; background: var(--bg-color); color: var(--text-main); }
-        .log-textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
-        .btn-analyze { background: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-analyze:hover { background: #dc2626; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-        
-        .leaflet-popup-content-wrapper { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; }
-        .leaflet-popup-tip { background: var(--card-bg); }
-        
-        .upload-btn { background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); cursor: pointer; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;}
-        .upload-btn:hover { background: var(--btn-hover); box-shadow: var(--shadow-sm); }
-        .tdx-btn { background: #0ea5e9; color: white; border: none; cursor: pointer; padding: 8px 24px; border-radius: 8px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;}
-        .tdx-btn:hover { background: #0284c7; box-shadow: var(--shadow-sm); }
-        
-        .tdx-input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-size: 13px; outline: none; transition: 0.2s; min-width: 180px;}
-        .tdx-input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1); }
+        .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid var(--border-color); }
+        .data-table th { background: var(--bg-color); font-weight: 700; font-size: 13px; }
     </style>
 </head>
 <body>
-    <a href="#main-content" class="skip-link">跳至主要內容</a>
-
     <div class="dashboard">
         <header class="header">
-            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: var(--primary-color); color: white; padding: 3px 8px; border-radius: 12px;">V2.2 企業版</span></h1>
-            <div class="header-actions">
-                <div class="last-update" id="update-time" aria-live="polite">資料同步中...</div>
-                <button class="theme-toggle" onclick="toggleTheme()" aria-label="切換深淺色模式" id="theme-btn">🌓</button>
-            </div>
+            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V3.0 PlugShare 企業版</span></h1>
+            <button class="nav-btn" onclick="toggleTheme()" style="min-width:auto;">🌓 切換深色</button>
         </header>
         
-        <nav class="main-nav" role="tablist">
-            <button class="nav-btn active" role="tab" aria-selected="true" onclick="switchMainTab('overview', event)" onkeydown="handleTabKey(event, 'overview')">📊 營運與市場</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('map', event)" onkeydown="handleTabKey(event, 'map')">🗺️ 站點地圖</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('news', event)" onkeydown="handleTabKey(event, 'news')">📡 情報牆</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('compare', event)" onkeydown="handleTabKey(event, 'compare')">🔥 競品定價</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('trend', event)" onkeydown="handleTabKey(event, 'trend')">📈 數量與趨勢</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('rates', event)" onkeydown="handleTabKey(event, 'rates')">💰 詳細費率</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('kb', event)" onkeydown="handleTabKey(event, 'kb')">🛠️ AI 診斷</button>
+        <nav class="main-nav">
+            <button class="nav-btn active" onclick="switchTab('map')">🗺️ 全台站點地圖</button>
+            <button class="nav-btn" onclick="switchTab('trend')">📊 各家數量排行</button>
+            <button class="nav-btn" onclick="switchTab('compare')">🔥 競品定價分析</button>
         </nav>
 
-        <main id="main-content">
-            <section id="section-overview" class="section active" role="tabpanel">
-                <h3 style="margin-top:0; color: var(--text-main);">內部營運與全台 CPO 核心指標</h3>
+        <main>
+            <!-- 地圖與 KPI 區塊 -->
+            <section id="section-map" class="section active">
                 <div class="kpi-grid">
-                    <div class="kpi-card"><div class="kpi-title">營運中站點數</div><div class="kpi-value skeleton" id="kpi-fet-stations">00 站</div><div class="kpi-desc" id="kpi-fet-growth">--</div></div>
-                    <div class="kpi-card"><div class="kpi-title">市場最低尖峰費率</div><div class="kpi-value skeleton" id="kpi-lowest-rate">$00.0</div><div class="kpi-desc" id="kpi-lowest-cpo">--</div></div>
-                    <div class="kpi-card"><div class="kpi-title">今日情報數</div><div class="kpi-value skeleton" id="kpi-news-count">00 筆</div><div class="kpi-desc">--</div></div>
-                    <div class="kpi-card"><div class="kpi-title">妥善率 (OCPP)</div><div class="kpi-value skeleton" id="kpi-ocpp">00.0%</div><div class="kpi-desc" id="kpi-ocpp-status">--</div></div>
-                </div>
-            </section>
-
-            <section id="section-map" class="section" role="tabpanel">
-                <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <span style="font-size: 14px; font-weight: 700; color: var(--text-main);">📡 TDX 即時介接：</span>
-                    <input type="text" id="tdx-client-id" class="tdx-input" placeholder="輸入 TDX Client ID">
-                    <input type="password" id="tdx-client-secret" class="tdx-input" placeholder="輸入 TDX Client Secret">
-                    <button class="tdx-btn" onclick="syncTdxLiveStatus()">🔄 獲取全台即時樁態</button>
-                    <span id="tdx-status" style="font-size: 13px; font-weight: 600; margin-left: 8px;"></span>
+                    <div class="kpi-card"><div class="kpi-title">總收錄站點 (PlugShare)</div><div class="kpi-value" id="kpi-total-stations">-- 站</div><div class="kpi-desc">涵蓋全台各家 CPO</div></div>
+                    <div class="kpi-card" style="border-left-color:#10b981;"><div class="kpi-title">EVOASIS 站點數</div><div class="kpi-value" id="kpi-evo-stations">-- 站</div><div class="kpi-desc">即時數量統計</div></div>
+                    <div class="kpi-card" style="border-left-color:#0369a1;"><div class="kpi-title">U-POWER 站點數</div><div class="kpi-value" id="kpi-u-stations">-- 站</div><div class="kpi-desc">即時數量統計</div></div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <h3 style="margin:0; color: var(--text-main); margin-right: 10px;">營運站點圖台</h3>
-                        <label class="upload-btn">
-                            📁 本機 Excel 匯入
-                            <input type="file" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
-                        </label>
-                        <button class="upload-btn" onclick="downloadExcelTemplate()">📥 下載公版</button>
-                    </div>
-                    
-                    <div style="font-size: 13px; color: var(--text-muted); background: var(--bg-color); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color); font-weight: 500;">
-                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16a34a; margin-right:4px;"></span> 可用 (Available)
-                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#0ea5e9; margin-left:12px; margin-right:4px;"></span> 充電中 (Charging)
-                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc2626; margin-left:12px; margin-right:4px;"></span> 異常 (Faulted)
-                    </div>
+                <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 15px; align-items: center;">
+                    <button class="sync-btn" onclick="syncPlugShare()">🔄 一鍵同步 PlugShare 真實數據</button>
+                    <span id="sync-status" style="font-size: 14px; font-weight: 600;"></span>
+                </div>
+                
+                <div style="font-size: 13px; margin-bottom: 10px; font-weight: 600;">
+                    <span style="color:#16a34a;">🟢 可用</span> | <span style="color:#0ea5e9;">⚡ 充電中</span> | <span style="color:#dc2626;">🔴 異常/離線</span>
                 </div>
                 <div id="station-map" style="height: 550px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color); z-index: 1;"></div>
             </section>
 
-            <section id="section-news" class="section" role="tabpanel">
-                <div class="filter-bar">
-                    <input type="text" id="news-search" class="search-input" placeholder="🔍 搜尋關鍵字 (如: 降價、新站)..." onkeyup="filterNews()">
-                    <select id="news-cpo-filter" class="cpo-select" onchange="filterNews()">
-                        <option value="all">所有來源</option>
-                    </select>
-                </div>
-                <div class="news-list" id="news-container">
-                    <div style="text-align:center; color:var(--text-muted); padding:20px;">資料載入中...</div>
-                </div>
+            <!-- 圖表區塊 -->
+            <section id="section-trend" class="section">
+                <h3 style="margin-top:0;">全台營運商站點數量即時排行</h3>
+                <div style="height: 450px;"><canvas id="expansionChart"></canvas></div>
             </section>
 
-            <section id="section-compare" class="section" role="tabpanel">
-                <div style="margin-bottom:15px; display:flex; gap:10px;">
-                    <button class="nav-btn active" id="btn-weekday" style="min-width:auto; padding:6px 12px;" onclick="renderCompare(false)">工作日</button>
-                    <button class="nav-btn" id="btn-weekend" style="min-width:auto; padding:6px 12px;" onclick="renderCompare(true)">週末</button>
-                </div>
-                <div class="table-responsive">
+            <!-- 定價區塊 -->
+            <section id="section-compare" class="section">
+                <h3 style="margin-top:0;">各家營運商尖離峰費率模擬表</h3>
+                <div style="overflow-x: auto;">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th class="time-col">時間</th>
-                                <th>遠傳</th>
-                                <th>EVALUE</th>
-                                <th style="color:#10b981;">EVOASIS</th>
-                                <th>iCharging</th>
-                                <th>TAIL</th>
-                                <th>U-POWER</th>
-                                <th>YES!來電</th>
-                                <th>當前優劣</th>
-                                <th class="ai-suggest-col" style="color: #ca8a04;">🤖 AI 建議定價 (遠傳)</th>
+                                <th>時段</th><th>遠傳</th><th>EVALUE</th><th style="color:#10b981;">EVOASIS</th><th>TAIL</th><th>U-POWER</th><th>🤖 AI 建議</th>
                             </tr>
                         </thead>
                         <tbody id="compare-tbody"></tbody>
                     </table>
                 </div>
             </section>
-
-            <section id="section-trend" class="section" role="tabpanel">
-                <div class="chart-container" style="height: 400px; background:var(--card-bg); border-radius:var(--radius-md); padding:10px;">
-                    <canvas id="expansionChart"></canvas>
-                </div>
-            </section>
-
-            <section id="section-rates" class="section" role="tabpanel">
-                <div style="margin-bottom: 15px; display:flex; gap:8px; overflow-x:auto;" id="rate-tabs-container"></div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead><tr><th class="time-col">時段</th><th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th></tr></thead>
-                        <tbody id="rate-tbody"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section id="section-kb" class="section" role="tabpanel">
-                <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 25px; margin-bottom: 30px;">
-                    <h4 style="margin-top:0; color: var(--text-main);">🤖 OCPP Log 智慧診斷引擎 (RAG / 容錯降級)</h4>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">貼上 WebSocket Log。系統將優先呼叫本地 Python API，若連線失敗則啟動前端備援規則庫。</p>
-                    <textarea id="ocpp-log-input" class="log-textarea" placeholder="貼上 Log，例如: [3, '19223201', {'status':'Rejected'}]"></textarea>
-                    <button class="btn-analyze" onclick="analyzeOcppLog()">🔍 發送診斷</button>
-                    <div id="log-result" style="display:none; margin-top:20px; padding:15px; border-radius:8px; border-left:4px solid var(--primary-color); background:var(--card-bg);"></div>
-                </div>
-            </section>
         </main>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        let allNewsData = [];
-        let cpoPricingData = {};
-        let techKbData = [];
-        let trendChartInstance = null;
-        let isChartJsLoaded = false;
-        
-        let mapInstance = null;
-        let mapTileLayer = null;
-        let markersLayer = null; 
-        let currentStations = []; 
+        let mapInstance = null, markersLayer = null, chartInstance = null;
+        let currentStations = [];
 
-        function initTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.getElementById('theme-color-meta').content = '#0f172a';
-            }
-        }
-        
         function toggleTheme() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            document.getElementById('theme-color-meta').content = isDark ? '#f8fafc' : '#0f172a';
-            localStorage.setItem('theme', isDark ? 'light' : 'dark');
-            if(trendChartInstance) trendChartInstance.update(); 
-        }
-        initTheme();
-
-        document.addEventListener("DOMContentLoaded", () => {
-            fetchData('data/stations.json', populateKpis, fallbackKpi);
-            fetchData('data/market.json', setupNews, fallbackNews);
-            fetchData('data/pricing.json', setupPricing, fallbackPricing);
-            fetchData('data/tech_kb.json', data => { techKbData = data; }, () => { techKbData = []; });
-        });
-
-        async function fetchData(url, onSuccess, onFail) {
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error('Network response was not ok');
-                const data = await res.json();
-                onSuccess(data);
-            } catch (e) {
-                console.warn(`${url} 載入失敗，啟動降級備援:`, e);
-                onFail();
-            }
+            if(chartInstance) updateRealChart();
         }
 
-        function switchMainTab(tabName, event) {
-            document.querySelectorAll('.nav-btn').forEach(btn => { 
-                btn.classList.remove('active'); 
-                btn.setAttribute('aria-selected', 'false');
-            });
-            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-            
-            if(event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
-                event.currentTarget.setAttribute('aria-selected', 'true');
-            }
-            document.getElementById('section-' + tabName).classList.add('active');
-            
-            if(tabName === 'rates' && document.getElementById('rate-tbody').innerHTML === '') renderRate('FET');
-            if(tabName === 'compare' && document.getElementById('compare-tbody').innerHTML === '') renderCompare(false);
-            if(tabName === 'trend') loadChartJsAndRender();
-            
-            if(tabName === 'map') {
-                setTimeout(() => {
-                    initMap();
-                    if(mapInstance) mapInstance.invalidateSize(); 
-                }, 100);
-            }
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('section-' + tabId).classList.add('active');
+            if(tabId === 'map') setTimeout(() => mapInstance.invalidateSize(), 100);
         }
 
-        function handleTabKey(event, tabName) {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                switchMainTab(tabName, event);
-            }
-        }
-
-        // --- 🗺️ 地圖與 TDX 介接邏輯 ---
         function initMap() {
-            if (mapInstance) return; 
-
-            mapInstance = L.map('station-map').setView([23.8, 120.9], 7); 
-            mapTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(mapInstance);
-
-            markersLayer = new L.FeatureGroup();
-            mapInstance.addLayer(markersLayer);
-
+            mapInstance = L.map('station-map').setView([23.8, 120.9], 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+            markersLayer = new L.FeatureGroup().addTo(mapInstance);
+            
+            // 啟動時先嘗試載入既有檔案
             fetch('http://localhost:8000/data/stations_live.json')
-                .then(res => {
-                    if(!res.ok) throw new Error('尚未同步資料');
-                    return res.json();
-                })
-                .then(data => {
-                    currentStations = data;
-                    renderMapMarkers(currentStations);
-                    updateRealTdxChart(); // 🆕 取得真實資料後，立刻更新圖表
-                })
-                .catch(err => {
-                    console.log("地圖暫無資料，請先執行 TDX 同步", err);
-                    document.getElementById('tdx-status').innerText = '💡 請輸入 API Key 執行 TDX 同步';
-                });
+                .then(res => res.json())
+                .then(data => { currentStations = data; renderData(); })
+                .catch(e => document.getElementById('sync-status').innerText = "💡 請點擊按鈕同步最新資料");
         }
 
-        async function syncTdxLiveStatus() {
-            const clientId = document.getElementById('tdx-client-id').value.trim();
-            const clientSecret = document.getElementById('tdx-client-secret').value.trim();
-            const statusText = document.getElementById('tdx-status');
-
-            if (!clientId || !clientSecret) {
-                statusText.innerText = '⚠️ 請填寫 Client ID 與 Secret';
-                statusText.style.color = '#ea580c';
-                return;
-            }
-
-            statusText.innerText = '📡 後端爬蟲正在從交通部拉取全台資料，請稍候...';
-            statusText.style.color = '#0ea5e9';
-
+        async function syncPlugShare() {
+            const status = document.getElementById('sync-status');
+            status.innerText = "📡 正在從 PlugShare 抓取全台資料，請稍候...";
+            status.style.color = "#8b5cf6";
             try {
-                const response = await fetch('http://localhost:8000/sync_tdx', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret })
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.detail || '伺服器錯誤');
-                }
-
-                const result = await response.json();
-
+                const res = await fetch('http://localhost:8000/sync_plugshare', { method: 'POST' });
+                if(!res.ok) throw new Error("伺服器連線失敗");
+                const result = await res.json();
+                
                 const dataRes = await fetch('http://localhost:8000/data/stations_live.json');
                 currentStations = await dataRes.json();
-                renderMapMarkers(currentStations);
-                updateRealTdxChart(); // 🆕 TDX 同步成功後，立刻計算真實站點數量並繪製圖表
-
-                statusText.innerText = `✅ ${result.message} (共 ${result.count} 站)`;
-                statusText.style.color = '#16a34a';
-
-            } catch (error) {
-                console.error(error);
-                statusText.innerText = `❌ ${error.message}`;
-                statusText.style.color = '#dc2626';
+                
+                renderData();
+                status.innerText = `✅ ${result.message} (共 ${result.count} 站)`;
+                status.style.color = "#16a34a";
+            } catch (err) {
+                status.innerText = "❌ 發生錯誤，請確認 rag_api.py 是否開啟";
+                status.style.color = "#dc2626";
             }
         }
 
-        function downloadExcelTemplate() {
-            const ws_data = [
-                ['站點代碼', '站點名稱', '緯度', '經度', '營運商', '即時槍態', '總功率(kW)', '充電樁數'],
-                ['FET-001', '遠傳 內湖瑞光站', 25.0792, 121.5794, 'FET', 'Available', 360, 4],
-                ['FET-002', '遠傳 台中七期站', 24.1631, 120.6418, 'FET', 'Available', 120, 2],
-                ['EVALUE-001', 'EVALUE 左營高鐵站', 22.6865, 120.3075, 'EVALUE', 'Available', 180, 4]
-            ];
-            const ws = XLSX.utils.aoa_to_sheet(ws_data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "充電站點庫");
-            XLSX.writeFile(wb, "CPO_StaticData_Template.xlsx");
-        }
-
-        function handleExcelUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const statusText = document.getElementById('tdx-status');
-            statusText.innerText = '🔄 讀取 Excel 中...';
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-                    if(jsonData.length === 0) throw new Error("無資料");
-
-                    currentStations = jsonData; 
-                    renderMapMarkers(currentStations);
-                    
-                    statusText.innerText = `✅ 本機匯入 ${jsonData.length} 筆站點`;
-                    statusText.style.color = '#16a34a';
-
-                    document.getElementById('kpi-fet-stations').innerText = jsonData.length + ' 站';
-                    document.getElementById('kpi-fet-growth').innerText = '依據 Excel 資料更新';
-
-                } catch (error) {
-                    statusText.innerText = `❌ 解析失敗`;
-                    statusText.style.color = '#dc2626';
-                }
-            };
-            reader.readAsArrayBuffer(file);
-            event.target.value = ''; 
-        }
-
-        function renderMapMarkers(data) {
-            if(!markersLayer) return;
-            markersLayer.clearLayers(); 
-
-            data.forEach(row => {
-                const name = row.name || row['站點名稱'] || '未知站點';
-                const lat = parseFloat(row.lat || row['緯度']);
-                const lng = parseFloat(row.lng || row['經度']);
-                const cpo = row.cpo || row['營運商'] || '未知';
-                const power = row.total_kw || row['總功率(kW)'] || '--';
-                const plugs = row.total_plugs || row['充電樁數'] || '--';
-                const code = row.id || row.station_id || row['站點代碼'] || '未綁定';
-                
-                const rawStatus = String(row.status || row.live_status || row['即時槍態'] || row['狀態'] || '').toLowerCase();
-                
-                if (isNaN(lat) || isNaN(lng)) return; 
-
-                let markerColor = '#64748b'; 
-                let statusHtml = '';
-
-                if (rawStatus.includes('available') || rawStatus.includes('可用') || rawStatus.includes('正常')) {
-                    markerColor = '#16a34a'; 
-                    statusHtml = `<span style="color:#16a34a; font-weight:bold;">🟢 可用 (Available)</span>`;
-                } else if (rawStatus.includes('charging') || rawStatus.includes('充電中')) {
-                    markerColor = '#0ea5e9'; 
-                    statusHtml = `<span style="color:#0ea5e9; font-weight:bold;">⚡ 充電中 (Charging)</span>`;
-                } else if (rawStatus.includes('faulted') || rawStatus.includes('異常') || rawStatus.includes('故障')) {
-                    markerColor = '#dc2626'; 
-                    statusHtml = `<span style="color:#dc2626; font-weight:bold;">🔴 故障 (Faulted)</span>`;
-                } else {
-                    statusHtml = `<span style="color:#64748b; font-weight:bold;">⚫ 離線 (Offline)</span>`;
-                }
-
-                const circleMarker = L.circleMarker([lat, lng], {
-                    radius: 6,
-                    fillColor: markerColor,
-                    color: '#ffffff',
-                    weight: 1.5,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                });
-
-                circleMarker.bindPopup(`
-                    <div style="font-family: 'Noto Sans TC', sans-serif; min-width: 180px;">
-                        <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">${name}</div>
-                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>TDX 代碼:</strong> <span style="font-family:monospace;">${code}</span></div>
-                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>營運商:</strong> ${cpo}</div>
-                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>設備規格:</strong> ${power} kW</div>
-                        <div style="font-size: 13px; margin-bottom: 4px;"><strong>充電樁數:</strong> ${plugs} 槍</div>
-                        <div style="font-size: 13px; margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 6px;"><strong>即時槍態:</strong> ${statusHtml}</div>
-                    </div>
-                `);
-                
-                markersLayer.addLayer(circleMarker);
-            });
+        function renderData() {
+            // 1. 渲染地圖
+            markersLayer.clearLayers();
+            let cpoCounts = { 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'iCharging': 0, 'YES': 0, 'FET': 0, '其他': 0 };
             
-            if(markersLayer.getLayers().length > 0) {
-                const bounds = markersLayer.getBounds();
-                mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
-            }
-        }
-
-        // --- 📈 即時 TDX 數量結算與圖表渲染 ---
-        function loadChartJsAndRender() {
-            if (isChartJsLoaded) { renderTrendChart(); return; }
-            const script = document.createElement('script');
-            script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-            script.onload = () => { isChartJsLoaded = true; renderTrendChart(); };
-            document.head.appendChild(script);
-        }
-
-        // 🆕 TDX 即時數據加總引擎
-        function updateRealTdxChart() {
-            if (!currentStations || currentStations.length === 0) return;
-            
-            // 準備計數器
-            let cpoCounts = { 'FET': 0, 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'iCharging': 0, 'YES': 0 };
-            
-            // 掃描全台數千支樁，進行歸類加總
             currentStations.forEach(st => {
-                let cpo = st.cpo ? st.cpo.toUpperCase() : '';
-                if (cpo.includes('FET') || cpo.includes('遠傳')) cpoCounts['FET']++;
-                else if (cpo.includes('EVOASIS') || cpo.includes('源點')) cpoCounts['EVOASIS']++;
-                else if (cpo.includes('U-POWER') || cpo.includes('旭電馳')) cpoCounts['U-POWER']++;
-                else if (cpo.includes('EVALUE') || cpo.includes('華城')) cpoCounts['EVALUE']++;
-                else if (cpo.includes('TAIL') || cpo.includes('特爾')) cpoCounts['TAIL']++;
-                else if (cpo.includes('ICHARGING') || cpo.includes('中興')) cpoCounts['iCharging']++;
-                else if (cpo.includes('YES') || cpo.includes('裕電')) cpoCounts['YES']++;
+                let color = '#64748b', statusText = '⚫ 離線';
+                if(st.status === 'Available') { color = '#16a34a'; statusText = '🟢 可用'; }
+                else if(st.status === 'Charging') { color = '#0ea5e9'; statusText = '⚡ 充電中'; }
+                else if(st.status === 'Faulted') { color = '#dc2626'; statusText = '🔴 異常'; }
+
+                L.circleMarker([st.lat, st.lng], { radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.9 })
+                    .bindPopup(`<b>${st.name}</b><br>營運商: ${st.cpo}<br>最高功率: ${st.total_kw} kW<br>總槍數: ${st.total_plugs}<br>狀態: ${statusText}`)
+                    .addTo(markersLayer);
+                
+                if (cpoCounts[st.cpo] !== undefined) cpoCounts[st.cpo]++;
+                else cpoCounts['其他']++;
             });
 
-            // 連動更新左上角的 KPI
-            document.getElementById('kpi-fet-stations').innerText = cpoCounts['FET'] + ' 站';
-            document.getElementById('kpi-fet-growth').innerText = '來自 TDX 即時數據';
-            
-            // 如果 Chart.js 還沒載入，就先跳過繪圖
-            if (!isChartJsLoaded) return;
+            // 2. 更新 KPI
+            document.getElementById('kpi-total-stations').innerText = currentStations.length + " 站";
+            document.getElementById('kpi-evo-stations').innerText = cpoCounts['EVOASIS'] + " 站";
+            document.getElementById('kpi-u-stations').innerText = cpoCounts['U-POWER'] + " 站";
 
+            // 3. 更新圖表
+            updateRealChart(cpoCounts);
+        }
+
+        function updateRealChart(cpoCounts) {
+            if(!cpoCounts) return;
             const ctx = document.getElementById('expansionChart').getContext('2d');
-            if(trendChartInstance) trendChartInstance.destroy();
+            if(chartInstance) chartInstance.destroy();
+            Chart.defaults.color = document.documentElement.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b';
             
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-            
-            // 繪製真實的即時數量排行 Bar Chart
-            trendChartInstance = new Chart(ctx, {
+            chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['EVOASIS', 'EVALUE', 'U-POWER', 'TAIL', 'iCharging', 'YES!來電', '遠傳 (FET)'],
+                    labels: ['EVOASIS', 'EVALUE', 'U-POWER', 'TAIL', 'YES!來電', 'iCharging', '其他'],
                     datasets: [{
-                        label: '全台真實營運站點數 (即時)',
-                        data: [cpoCounts['EVOASIS'], cpoCounts['EVALUE'], cpoCounts['U-POWER'], cpoCounts['TAIL'], cpoCounts['iCharging'], cpoCounts['YES'], cpoCounts['FET']],
-                        backgroundColor: ['#10b981', '#16a34a', '#0369a1', '#0891b2', '#ea580c', '#ca8a04', '#ef4444'],
+                        label: '全台即時營運站點數 (資料來源: PlugShare)',
+                        data: [cpoCounts['EVOASIS'], cpoCounts['EVALUE'], cpoCounts['U-POWER'], cpoCounts['TAIL'], cpoCounts['YES'], cpoCounts['iCharging'], cpoCounts['其他']],
+                        backgroundColor: ['#10b981', '#16a34a', '#0369a1', '#0891b2', '#ca8a04', '#ea580c', '#64748b'],
                         borderRadius: 6
                     }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: '全台各 CPO 站點真實數量排行 (MOTC TDX 即時運算)' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        function renderTrendChart() {
-            // 🆕 如果已經有 TDX 真實資料，就畫出真實的 Bar Chart
-            if (currentStations && currentStations.length > 0) {
-                updateRealTdxChart();
-                return;
-            }
-            
-            // 如果沒有 TDX 資料，才使用備援的歷史趨勢模擬數據
-            console.log('尚未獲取 TDX，載入模擬趨勢數據');
-            const mockData = {
-                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月'],
-                datasets: {
-                    'FET': [10, 15, 22, 35, 42, 50, 58, 62, 65],
-                    'EVOASIS': [30, 42, 55, 70, 85, 105, 120, 135, 150],
-                    'U-POWER': [20, 25, 32, 40, 48, 55, 65, 75, 80],
-                    'EVALUE': [40, 42, 45, 48, 50, 52, 55, 58, 60],
-                    'TAIL': [15, 18, 20, 25, 30, 35, 38, 42, 45]
-                }
-            };
-            
-            const ctx = document.getElementById('expansionChart').getContext('2d');
-            if(trendChartInstance) trendChartInstance.destroy();
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-            
-            trendChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: mockData.labels,
-                    datasets: [
-                        { label: '遠傳 (FET)', data: mockData.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                        { label: 'EVOASIS', data: mockData.datasets['EVOASIS'], borderColor: '#10b981', tension: 0.3 },
-                        { label: 'U-POWER', data: mockData.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 },
-                        { label: 'EVALUE', data: mockData.datasets['EVALUE'], borderColor: '#16a34a', tension: 0.3 },
-                        { label: 'TAIL', data: mockData.datasets['TAIL'], borderColor: '#0891b2', borderDash: [5, 5], tension: 0.3 }
-                    ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        function populateKpis(data) {
-            document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
-            // 這邊只保留最低費率與妥善率的更新，站點數交由 updateRealTdxChart() 計算真實數據
-            document.getElementById('kpi-lowest-rate').innerText = '$' + data.lowest_peak_rate;
-            document.getElementById('kpi-lowest-cpo').innerText = data.lowest_peak_cpo;
-            document.getElementById('kpi-ocpp').innerText = data.ocpp_availability + '%';
-            document.getElementById('update-time').innerText = '最後更新: ' + new Date().toLocaleString('zh-TW', {hour12:false});
-        }
-        function fallbackKpi() {
-            populateKpis({fet_stations: 65, fet_growth_rate: "靜態展示模式", lowest_peak_rate: 10.9, lowest_peak_cpo: "遠傳 (基準)", ocpp_availability: 99.4});
-        }
-
-        function setupNews(data) {
-            allNewsData = data;
-            
-            const hasEvoasis = allNewsData.some(item => item.cpo === 'EVOASIS');
-            if (!hasEvoasis) {
-                allNewsData.unshift({
-                    "date": new Date().toISOString().split('T')[0],
-                    "cpo": "EVOASIS",
-                    "title": "[新站啟用|優惠] EVOASIS 桃園青埔超級快充站上線，限時星晴電價每度 6.5 元",
-                    "url": "https://www.evoasis.com.tw/"
-                });
-            }
-
-            document.getElementById('kpi-news-count').innerText = allNewsData.length + ' 筆';
-            
-            const cpos = [...new Set(allNewsData.map(item => item.cpo))];
-            const select = document.getElementById('news-cpo-filter');
-            select.innerHTML = '<option value="all">所有來源</option>';
-            cpos.forEach(cpo => {
-                let opt = document.createElement('option');
-                opt.value = cpo; opt.text = cpo;
-                select.appendChild(opt);
-            });
-            renderNews(allNewsData);
-        }
-
-        function fallbackNews() {
-            setupNews([
-                {"date": "2026-10-01", "cpo": "FET", "title": "[政策] 遠傳電信得標新竹市公有停車場充電樁 BOT 案", "url": "#"},
-                {"date": "2026-09-28", "cpo": "EVOASIS", "title": "[新站啟用|優惠] EVOASIS 桃園青埔超級快充站上線，限時星晴電價每度 6.5 元", "url": "https://www.evoasis.com.tw/"},
-                {"date": "2026-09-25", "cpo": "U-POWER", "title": "[新站啟用] U-POWER 新竹慈雲站啟用，提供 360kW 超充", "url": "#"}
-            ]);
-        }
-
-        function filterNews() {
-            const query = document.getElementById('news-search').value.toLowerCase();
-            const cpoFilter = document.getElementById('news-cpo-filter').value;
-            const filtered = allNewsData.filter(item => {
-                const matchQuery = item.title.toLowerCase().includes(query);
-                const matchCpo = cpoFilter === 'all' || item.cpo === cpoFilter;
-                return matchQuery && matchCpo;
-            });
-            renderNews(filtered);
-        }
-
-        function renderNews(data) {
-            const container = document.getElementById('news-container');
-            if (data.length === 0) { container.innerHTML = '<div style="padding:20px; text-align:center;">無符合條件之情報</div>'; return; }
-            
+        function renderPricing() {
             let html = '';
-            data.forEach(item => {
-                let cleanTitle = item.title.replace(/202\d[/-]\d{1,2}[/-]\d{1,2}|【.*?】|\[.*?\]/g, '').trim();
-                let tagsHtml = '';
-                const tagMatch = item.title.match(/\[(.*?)\]/);
-                if (tagMatch) {
-                    tagMatch[1].split('|').forEach(t => {
-                        let c = 'spec-tag';
-                        if(t.includes('政策')) c += ' policy';
-                        if(t.includes('新站') || t.includes('優惠')) c += ' highlight';
-                        tagsHtml += `<span class="${c}">${t.trim()}</span>`;
-                    });
-                }
-                const cpoClass = `cpo-${item.cpo.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-                html += `
-                    <div class="news-card">
-                        <div class="news-cpo ${cpoClass}">${item.cpo}</div>
-                        <div class="news-content">
-                            <a href="${item.url}" target="_blank" class="news-link">${cleanTitle}</a>
-                            <div class="spec-tags">${tagsHtml}</div>
-                        </div>
-                        <div class="news-date">${item.date}</div>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function setupPricing(data) {
-            cpoPricingData = data;
-            if (!cpoPricingData['EVOASIS']) {
-                cpoPricingData['EVOASIS'] = {
-                    'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21
-                };
-            }
-            buildRateTabs();
-        }
-
-        function fallbackPricing() {
-            setupPricing({
-                'FET': {'type': 'TOU', 'peak': 10.9, 'offPeak': 6.8, 'holiday': 7.9, 'peakStart': 16, 'peakEnd': 21},
-                'EVALUE': {'type': 'TOU', 'peak': 13.5, 'offPeak': 6.9, 'holiday': 8.5, 'peakStart': 16, 'peakEnd': 21},
-                'EVOASIS': {'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21},
-                'iCharging': {'type': 'TOU', 'peak': 12.0, 'offPeak': 6.5, 'holiday': 6.5, 'peakStart': 18, 'peakEnd': 21},
-                'TAIL': {'type': 'TOU', 'peak': 11.9, 'offPeak': 8.9, 'holiday': 8.9, 'peakStart': 16, 'peakEnd': 21},
-                'U-POWER': {'type': 'FLAT', 'price': 9.9},
-                'YES': {'type': 'FLAT', 'price': 9.5}
-            });
-        }
-
-        function buildRateTabs() {
-            const container = document.getElementById('rate-tabs-container');
-            let html = '';
-            Object.keys(cpoPricingData).forEach((cpo, idx) => {
-                html += `<button class="nav-btn ${idx===0?'active':''}" onclick="renderRate('${cpo}', event)" style="min-width:auto; padding:6px 15px;">${cpo}</button>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function getPrice(cpo, hour, isWeekend) {
-            const conf = cpoPricingData[cpo];
-            if (!conf) return 0;
-            if (conf.type === 'FLAT') return conf.price;
-            if (isWeekend) return conf.holiday || conf.offPeak;
-            return (hour >= conf.peakStart && hour <= conf.peakEnd) ? conf.peak : conf.offPeak;
-        }
-
-        function renderCompare(isWeekend) {
-            document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
-            document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
-            
-            const cposForCompare = ['FET', 'EVALUE', 'EVOASIS', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
-            if(Object.keys(cpoPricingData).length === 0) return;
-
-            let html = '';
-            for (let h = 0; h < 24; h++) {
-                const prices = cposForCompare.map(cpo => getPrice(cpo, h, isWeekend));
-                const fetPrice = prices[0]; 
-                const minOtherPrice = Math.min(...prices.slice(1)); 
-                const diff = (fetPrice - minOtherPrice).toFixed(1);
+            for(let h=0; h<24; h++) {
+                let p_fet = h>=16&&h<=21 ? 10.9 : 6.8;
+                let p_evo = h>=16&&h<=21 ? 11.5 : 7.5;
+                let p_upower = 9.9;
+                let rec = Math.max(p_evo - 0.1, 6.5);
                 
-                html += `<tr><td class="time-col">${String(h).padStart(2,'0')}:00</td>`;
-                
-                prices.forEach((p, i) => {
-                    html += `<td style="${i===0?'font-weight:bold; color:var(--primary-color);':''}color:var(--text-main);">$${p.toFixed(1)}</td>`;
-                });
-                
-                if (fetPrice < minOtherPrice) html += `<td><span style="color:#16a34a;">🏆 勝 ($${Math.abs(diff)})</span></td>`;
-                else if (fetPrice === minOtherPrice) html += `<td><span style="color:#0ea5e9;">🤝 平</span></td>`;
-                else html += `<td><span style="color:#dc2626;">⚠️ 輸 ($${diff})</span></td>`;
-
-                let suggestionTag = '';
-                if (fetPrice < minOtherPrice) {
-                    suggestionTag = `<span style="color:#16a34a; font-weight:700;">$${fetPrice.toFixed(1)} (保持優勢)</span>`;
-                } else if (fetPrice === minOtherPrice) {
-                    let recPrice = Math.max(fetPrice - 0.1, 6.0);
-                    suggestionTag = `<span style="color:#ca8a04; font-weight:700;">$${recPrice.toFixed(1)} (微降搶市)</span>`;
-                } else {
-                    let recPrice = Math.max(minOtherPrice - 0.1, 6.0);
-                    suggestionTag = `<span style="color:#dc2626; font-weight:700;">$${recPrice.toFixed(1)} (建議降價)</span>`;
-                }
-                
-                html += `<td class="ai-suggest-col">${suggestionTag}</td></tr>`;
+                html += `<tr>
+                    <td style="font-weight:bold;">${String(h).padStart(2,'0')}:00</td>
+                    <td>$${p_fet.toFixed(1)}</td><td>$${(p_fet+1).toFixed(1)}</td>
+                    <td style="font-weight:bold; color:#10b981;">$${p_evo.toFixed(1)}</td>
+                    <td>$8.9</td><td>$${p_upower.toFixed(1)}</td>
+                    <td style="background:#fefce8; border-left:2px solid #ca8a04; font-weight:bold; color:#ca8a04;">
+                        $${rec.toFixed(1)} (競價建議)
+                    </td>
+                </tr>`;
             }
             document.getElementById('compare-tbody').innerHTML = html;
         }
 
-        function renderRate(cpo, event) {
-            if(event) {
-                document.getElementById('rate-tabs-container').querySelectorAll('button').forEach(b => b.classList.remove('active'));
-                event.currentTarget.classList.add('active');
-            }
-            let html = '';
-            for (let h = 0; h < 24; h++) {
-                html += `<tr><td class="time-col">${String(h).padStart(2,'0')}:00</td>`;
-                for (let d = 1; d <= 7; d++) {
-                    let p = getPrice(cpo, h, d >= 6);
-                    let color = p > 10 ? '#ea580c' : (d>=6 ? '#ca8a04' : '#16a34a');
-                    html += `<td style="color:${color}; font-weight:600;">$${p.toFixed(1)}</td>`;
-                }
-                html += `</tr>`;
-            }
-            document.getElementById('rate-tbody').innerHTML = html;
-        }
-
-        async function analyzeOcppLog() {
-            const logText = document.getElementById('ocpp-log-input').value.trim();
-            const resultDiv = document.getElementById('log-result');
-            
-            if (!logText) {
-                resultDiv.style.display = 'block'; resultDiv.style.borderLeftColor = '#ea580c';
-                resultDiv.innerHTML = '請輸入 Log 內容。'; return;
-            }
-
-            resultDiv.style.display = 'block'; resultDiv.style.borderLeftColor = '#8b5cf6';
-            resultDiv.innerHTML = '📡 正在嘗試呼叫 AI 後端 API...';
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
-                
-                const response = await fetch('http://localhost:8000/analyze_log', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ log_content: logText }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) throw new Error('API 回應異常');
-                const data = await response.json();
-                resultDiv.style.borderLeftColor = "#10b981"; 
-                resultDiv.innerHTML = data.diagnosis_html;
-            } catch (error) {
-                resultDiv.style.borderLeftColor = "#f59e0b";
-                resultDiv.innerHTML = `<div style="color:var(--text-muted); font-size:12px; margin-bottom:8px;">⚠️ API 連線逾時，已切換至「前端備援規則庫」比對。</div>` 
-                                    + runFrontendRuleEngine(logText);
-            }
-        }
-
-        function runFrontendRuleEngine(log) {
-            const lowerLog = log.toLowerCase();
-            let match = techKbData.find(kb => {
-                let kw = kb.issue.toLowerCase().split(' ')[0];
-                return lowerLog.includes(kw) || (lowerLog.includes('rejected') && kb.issue.includes('連線拒絕'));
-            });
-
-            if(lowerLog.includes('rejected')) {
-                return `<strong>🚨 連線驗證遭拒 (BootNotification Rejected)</strong><br><br>💡 <strong>備援對策：</strong><br>1. 檢查 ChargePointID 是否相符。<br>2. 檢查 Authorization Key 密碼設定。`;
-            } else if (lowerLog.includes('faulted')) {
-                return `<strong>⚠️ 設備硬體異常 (Faulted)</strong><br><br>💡 <strong>備援對策：</strong>檢查急停按鈕或配電盤供電。`;
-            }
-            return `<strong>✅ 未偵測到嚴重異常特徵碼。</strong><br><br>💡 若持續無法連線，請匯出完整 pcap 封包交由 L2 分析。`;
-        }
+        window.onload = () => { initMap(); renderPricing(); };
     </script>
 </body>
 </html>
