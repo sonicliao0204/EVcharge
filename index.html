@@ -92,7 +92,7 @@
         .cpo-icharging { background: #ea580c; color: #fff; border: 1px solid #c2410c; }
         .cpo-tail { background: #0891b2; color: #fff; border: 1px solid #0e7490; }
         .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
-        .cpo-evoasis { background: #10b981; color: #fff; border: 1px solid #059669; } /* EVOASIS 專屬配色 */
+        .cpo-evoasis { background: #10b981; color: #fff; border: 1px solid #059669; }
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
         .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; }
@@ -137,7 +137,7 @@
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('map', event)" onkeydown="handleTabKey(event, 'map')">🗺️ 站點地圖</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('news', event)" onkeydown="handleTabKey(event, 'news')">📡 情報牆</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('compare', event)" onkeydown="handleTabKey(event, 'compare')">🔥 競品定價</button>
-            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('trend', event)" onkeydown="handleTabKey(event, 'trend')">📈 趨勢分析</button>
+            <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('trend', event)" onkeydown="handleTabKey(event, 'trend')">📈 數量與趨勢</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('rates', event)" onkeydown="handleTabKey(event, 'rates')">💰 詳細費率</button>
             <button class="nav-btn" role="tab" aria-selected="false" onclick="switchMainTab('kb', event)" onkeydown="handleTabKey(event, 'kb')">🛠️ AI 診斷</button>
         </nav>
@@ -350,6 +350,7 @@
                 .then(data => {
                     currentStations = data;
                     renderMapMarkers(currentStations);
+                    updateRealTdxChart(); // 🆕 取得真實資料後，立刻更新圖表
                 })
                 .catch(err => {
                     console.log("地圖暫無資料，請先執行 TDX 同步", err);
@@ -388,11 +389,10 @@
                 const dataRes = await fetch('http://localhost:8000/data/stations_live.json');
                 currentStations = await dataRes.json();
                 renderMapMarkers(currentStations);
+                updateRealTdxChart(); // 🆕 TDX 同步成功後，立刻計算真實站點數量並繪製圖表
 
                 statusText.innerText = `✅ ${result.message} (共 ${result.count} 站)`;
                 statusText.style.color = '#16a34a';
-
-                document.getElementById('kpi-fet-stations').innerText = result.count + ' 站 (全台)';
 
             } catch (error) {
                 console.error(error);
@@ -510,7 +510,7 @@
             }
         }
 
-        // --- 📈 趨勢分析 (包含模擬歷史資料與 EVOASIS) ---
+        // --- 📈 即時 TDX 數量結算與圖表渲染 ---
         function loadChartJsAndRender() {
             if (isChartJsLoaded) { renderTrendChart(); return; }
             const script = document.createElement('script');
@@ -519,52 +519,108 @@
             document.head.appendChild(script);
         }
 
-        function renderTrendChart() {
-            // 先嘗試讀取後端的歷史 json 檔案，若無則啟用帶有 EVOASIS 的模擬數據
-            fetchData('data/price_history.json', data => {
-                drawChart(data);
-            }, () => {
-                console.log('載入模擬趨勢數據 (包含 EVOASIS)');
-                const mockData = {
-                    labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月'],
-                    datasets: {
-                        'FET': [10, 15, 22, 35, 42, 50, 58, 62, 65],
-                        'EVOASIS': [30, 42, 55, 70, 85, 105, 120, 135, 150], // 新增 EVOASIS
-                        'U-POWER': [20, 25, 32, 40, 48, 55, 65, 75, 80],
-                        'EVALUE': [40, 42, 45, 48, 50, 52, 55, 58, 60],
-                        'TAIL': [15, 18, 20, 25, 30, 35, 38, 42, 45]
-                    }
-                };
-                drawChart(mockData);
+        // 🆕 TDX 即時數據加總引擎
+        function updateRealTdxChart() {
+            if (!currentStations || currentStations.length === 0) return;
+            
+            // 準備計數器
+            let cpoCounts = { 'FET': 0, 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'iCharging': 0, 'YES': 0 };
+            
+            // 掃描全台數千支樁，進行歸類加總
+            currentStations.forEach(st => {
+                let cpo = st.cpo ? st.cpo.toUpperCase() : '';
+                if (cpo.includes('FET') || cpo.includes('遠傳')) cpoCounts['FET']++;
+                else if (cpo.includes('EVOASIS') || cpo.includes('源點')) cpoCounts['EVOASIS']++;
+                else if (cpo.includes('U-POWER') || cpo.includes('旭電馳')) cpoCounts['U-POWER']++;
+                else if (cpo.includes('EVALUE') || cpo.includes('華城')) cpoCounts['EVALUE']++;
+                else if (cpo.includes('TAIL') || cpo.includes('特爾')) cpoCounts['TAIL']++;
+                else if (cpo.includes('ICHARGING') || cpo.includes('中興')) cpoCounts['iCharging']++;
+                else if (cpo.includes('YES') || cpo.includes('裕電')) cpoCounts['YES']++;
             });
 
-            function drawChart(data) {
-                const ctx = document.getElementById('expansionChart').getContext('2d');
-                if(trendChartInstance) trendChartInstance.destroy();
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-                
-                trendChartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [
-                            { label: '遠傳 (FET)', data: data.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                            { label: 'EVOASIS', data: data.datasets['EVOASIS'], borderColor: '#10b981', tension: 0.3 }, // 繪製 EVOASIS 折線
-                            { label: 'U-POWER', data: data.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 },
-                            { label: 'EVALUE', data: data.datasets['EVALUE'], borderColor: '#16a34a', tension: 0.3 },
-                            { label: 'TAIL', data: data.datasets['TAIL'], borderColor: '#0891b2', borderDash: [5, 5], tension: 0.3 }
-                        ]
+            // 連動更新左上角的 KPI
+            document.getElementById('kpi-fet-stations').innerText = cpoCounts['FET'] + ' 站';
+            document.getElementById('kpi-fet-growth').innerText = '來自 TDX 即時數據';
+            
+            // 如果 Chart.js 還沒載入，就先跳過繪圖
+            if (!isChartJsLoaded) return;
+
+            const ctx = document.getElementById('expansionChart').getContext('2d');
+            if(trendChartInstance) trendChartInstance.destroy();
+            
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+            
+            // 繪製真實的即時數量排行 Bar Chart
+            trendChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['EVOASIS', 'EVALUE', 'U-POWER', 'TAIL', 'iCharging', 'YES!來電', '遠傳 (FET)'],
+                    datasets: [{
+                        label: '全台真實營運站點數 (即時)',
+                        data: [cpoCounts['EVOASIS'], cpoCounts['EVALUE'], cpoCounts['U-POWER'], cpoCounts['TAIL'], cpoCounts['iCharging'], cpoCounts['YES'], cpoCounts['FET']],
+                        backgroundColor: ['#10b981', '#16a34a', '#0369a1', '#0891b2', '#ea580c', '#ca8a04', '#ef4444'],
+                        borderRadius: 6
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: '全台各 CPO 站點真實數量排行 (MOTC TDX 即時運算)' }
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderTrendChart() {
+            // 🆕 如果已經有 TDX 真實資料，就畫出真實的 Bar Chart
+            if (currentStations && currentStations.length > 0) {
+                updateRealTdxChart();
+                return;
             }
+            
+            // 如果沒有 TDX 資料，才使用備援的歷史趨勢模擬數據
+            console.log('尚未獲取 TDX，載入模擬趨勢數據');
+            const mockData = {
+                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月'],
+                datasets: {
+                    'FET': [10, 15, 22, 35, 42, 50, 58, 62, 65],
+                    'EVOASIS': [30, 42, 55, 70, 85, 105, 120, 135, 150],
+                    'U-POWER': [20, 25, 32, 40, 48, 55, 65, 75, 80],
+                    'EVALUE': [40, 42, 45, 48, 50, 52, 55, 58, 60],
+                    'TAIL': [15, 18, 20, 25, 30, 35, 38, 42, 45]
+                }
+            };
+            
+            const ctx = document.getElementById('expansionChart').getContext('2d');
+            if(trendChartInstance) trendChartInstance.destroy();
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+            
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: mockData.labels,
+                    datasets: [
+                        { label: '遠傳 (FET)', data: mockData.datasets['FET'], borderColor: '#ef4444', tension: 0.3, fill:true, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+                        { label: 'EVOASIS', data: mockData.datasets['EVOASIS'], borderColor: '#10b981', tension: 0.3 },
+                        { label: 'U-POWER', data: mockData.datasets['U-POWER'], borderColor: '#0369a1', tension: 0.3 },
+                        { label: 'EVALUE', data: mockData.datasets['EVALUE'], borderColor: '#16a34a', tension: 0.3 },
+                        { label: 'TAIL', data: mockData.datasets['TAIL'], borderColor: '#0891b2', borderDash: [5, 5], tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
         }
 
         function populateKpis(data) {
             document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('skeleton'));
-            document.getElementById('kpi-fet-stations').innerText = data.fet_stations + ' 站';
-            document.getElementById('kpi-fet-growth').innerText = data.fet_growth_rate;
+            // 這邊只保留最低費率與妥善率的更新，站點數交由 updateRealTdxChart() 計算真實數據
             document.getElementById('kpi-lowest-rate').innerText = '$' + data.lowest_peak_rate;
             document.getElementById('kpi-lowest-cpo').innerText = data.lowest_peak_cpo;
             document.getElementById('kpi-ocpp').innerText = data.ocpp_availability + '%';
@@ -574,11 +630,9 @@
             populateKpis({fet_stations: 65, fet_growth_rate: "靜態展示模式", lowest_peak_rate: 10.9, lowest_peak_cpo: "遠傳 (基準)", ocpp_availability: 99.4});
         }
 
-        // --- 📡 情報牆 (防禦性寫入 EVOASIS) ---
         function setupNews(data) {
             allNewsData = data;
             
-            // 防禦：檢查 JSON 裡面有沒有 EVOASIS 的新聞，沒有就強制加一條
             const hasEvoasis = allNewsData.some(item => item.cpo === 'EVOASIS');
             if (!hasEvoasis) {
                 allNewsData.unshift({
@@ -652,11 +706,8 @@
             container.innerHTML = html;
         }
 
-        // --- 💰 費率與競品分析 (防禦性寫入 EVOASIS) ---
         function setupPricing(data) {
             cpoPricingData = data;
-            
-            // 防禦：檢查 JSON 裡面有沒有 EVOASIS，沒有就強制補上預設費率
             if (!cpoPricingData['EVOASIS']) {
                 cpoPricingData['EVOASIS'] = {
                     'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21
@@ -698,7 +749,6 @@
             document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
             document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
             
-            // 將 EVOASIS 加入比價運算陣列中
             const cposForCompare = ['FET', 'EVALUE', 'EVOASIS', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
             if(Object.keys(cpoPricingData).length === 0) return;
 
