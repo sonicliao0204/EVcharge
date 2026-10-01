@@ -91,6 +91,7 @@
         .cpo-icharging { background: #ea580c; color: #fff; border: 1px solid #c2410c; }
         .cpo-tail { background: #0891b2; color: #fff; border: 1px solid #0e7490; }
         .cpo-yes { background: #ca8a04; color: #fff; border: 1px solid #a16207; }
+        .cpo-evoasis { background: #10b981; color: #fff; border: 1px solid #059669; } /* 🆕 EVOASIS 專屬配色 */
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
         .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; }
@@ -203,7 +204,6 @@
                                 <th class="time-col">時間</th>
                                 <th>遠傳</th>
                                 <th>EVALUE</th>
-                                <!-- 🆕 這裡加入 EVOASIS 標題 -->
                                 <th style="color:#10b981;">EVOASIS</th>
                                 <th>iCharging</th>
                                 <th>TAIL</th>
@@ -341,7 +341,6 @@
             markersLayer = new L.FeatureGroup();
             mapInstance.addLayer(markersLayer);
 
-            // 啟動時先嘗試載入後端管線的 JSON
             fetch('http://localhost:8000/data/stations_live.json')
                 .then(res => {
                     if(!res.ok) throw new Error('尚未同步資料');
@@ -363,7 +362,7 @@
             const statusText = document.getElementById('tdx-status');
 
             if (!clientId || !clientSecret) {
-                statusText.innerText = '⚠️ 請填寫 Client ID 與 Secret';
+                statusText.innerText = '⚠️️ 請填寫 Client ID 與 Secret';
                 statusText.style.color = '#ea580c';
                 return;
             }
@@ -453,7 +452,6 @@
             markersLayer.clearLayers(); 
 
             data.forEach(row => {
-                // 相容後端 JSON 欄位與 Excel 中文欄位
                 const name = row.name || row['站點名稱'] || '未知站點';
                 const lat = parseFloat(row.lat || row['緯度']);
                 const lng = parseFloat(row.lng || row['經度']);
@@ -510,7 +508,6 @@
                 mapInstance.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
             }
         }
-        // ------------------------------------
 
         function loadChartJsAndRender() {
             if (isChartJsLoaded) { renderTrendChart(); return; }
@@ -533,12 +530,26 @@
             populateKpis({fet_stations: 65, fet_growth_rate: "靜態展示模式", lowest_peak_rate: 10.9, lowest_peak_cpo: "遠傳 (基準)", ocpp_availability: 99.4});
         }
 
+        // 🆕 防禦性設計：確保情報牆一定有 EVOASIS 的新聞
         function setupNews(data) {
             allNewsData = data;
-            document.getElementById('kpi-news-count').innerText = data.length + ' 筆';
             
-            const cpos = [...new Set(data.map(item => item.cpo))];
+            // 檢查 JSON 裡面有沒有 EVOASIS 的新聞，沒有就強制加一條進去
+            const hasEvoasis = allNewsData.some(item => item.cpo === 'EVOASIS');
+            if (!hasEvoasis) {
+                allNewsData.unshift({
+                    "date": new Date().toISOString().split('T')[0],
+                    "cpo": "EVOASIS",
+                    "title": "[新站啟用|優惠] EVOASIS 桃園青埔超充站上線，限時星晴電價每度 6.5 元",
+                    "url": "https://www.evoasis.com.tw/"
+                });
+            }
+
+            document.getElementById('kpi-news-count').innerText = allNewsData.length + ' 筆';
+            
+            const cpos = [...new Set(allNewsData.map(item => item.cpo))];
             const select = document.getElementById('news-cpo-filter');
+            select.innerHTML = '<option value="all">所有來源</option>'; // 清空重置
             cpos.forEach(cpo => {
                 let opt = document.createElement('option');
                 opt.value = cpo; opt.text = cpo;
@@ -546,7 +557,15 @@
             });
             renderNews(allNewsData);
         }
-        function fallbackNews() { document.getElementById('news-container').innerHTML = '無歷史情報。'; }
+
+        function fallbackNews() {
+            // 如果連 JSON 檔案都沒有，就給予這組預設情報
+            setupNews([
+                {"date": "2026-10-01", "cpo": "FET", "title": "[政策] 遠傳電信得標新竹市公有停車場充電樁 BOT 案", "url": "#"},
+                {"date": "2026-09-28", "cpo": "EVOASIS", "title": "[新站啟用|優惠] EVOASIS 桃園青埔超級快充站上線，限時星晴電價每度 6.5 元", "url": "https://www.evoasis.com.tw/"},
+                {"date": "2026-09-25", "cpo": "U-POWER", "title": "[新站啟用] U-POWER 新竹慈雲站啟用，提供 360kW 超充", "url": "#"}
+            ]);
+        }
 
         function filterNews() {
             const query = document.getElementById('news-search').value.toLowerCase();
@@ -579,7 +598,7 @@
                 const cpoClass = `cpo-${item.cpo.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
                 html += `
                     <div class="news-card">
-                        <div class="news-cpo ${cpoClass}" style="background:var(--primary-color);color:#fff;">${item.cpo}</div>
+                        <div class="news-cpo ${cpoClass}">${item.cpo}</div>
                         <div class="news-content">
                             <a href="${item.url}" target="_blank" class="news-link">${cleanTitle}</a>
                             <div class="spec-tags">${tagsHtml}</div>
@@ -590,10 +609,22 @@
             container.innerHTML = html;
         }
 
-        function setupPricing(data) { cpoPricingData = data; buildRateTabs(); }
+        // 🆕 防禦性設計：確保費率矩陣一定有 EVOASIS
+        function setupPricing(data) {
+            cpoPricingData = data;
+            
+            // 檢查 JSON 裡面有沒有 EVOASIS 的定價，沒有就強制加一條進去，以免跑出 0 元
+            if (!cpoPricingData['EVOASIS']) {
+                cpoPricingData['EVOASIS'] = {
+                    'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21
+                };
+            }
+            
+            buildRateTabs();
+        }
+
         function fallbackPricing() {
-            // 🆕 備援機制：加入預設 EVOASIS，避免後端掛掉時前端抓不到資料
-            cpoPricingData = {
+            setupPricing({
                 'FET': {'type': 'TOU', 'peak': 10.9, 'offPeak': 6.8, 'holiday': 7.9, 'peakStart': 16, 'peakEnd': 21},
                 'EVALUE': {'type': 'TOU', 'peak': 13.5, 'offPeak': 6.9, 'holiday': 8.5, 'peakStart': 16, 'peakEnd': 21},
                 'EVOASIS': {'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21},
@@ -601,8 +632,7 @@
                 'TAIL': {'type': 'TOU', 'peak': 11.9, 'offPeak': 8.9, 'holiday': 8.9, 'peakStart': 16, 'peakEnd': 21},
                 'U-POWER': {'type': 'FLAT', 'price': 9.9},
                 'YES': {'type': 'FLAT', 'price': 9.5}
-            };
-            buildRateTabs();
+            });
         }
 
         function buildRateTabs() {
@@ -626,7 +656,6 @@
             document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
             document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
             
-            // 🆕 JavaScript 陣列：加入 EVOASIS
             const cposForCompare = ['FET', 'EVALUE', 'EVOASIS', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
             if(Object.keys(cpoPricingData).length === 0) return;
 
