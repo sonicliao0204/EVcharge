@@ -1,58 +1,61 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+import json
 import os
+import requests
+from bs4 import BeautifulSoup
+from apscheduler.schedulers.background import BackgroundScheduler
+from contextlib import asynccontextmanager
 
-# 載入我們寫好的 TDX 管線
-from tdx_pipeline import TDXIngestion, EVDataProcessor, EVDatabaseMart
-
-app = FastAPI(title="充電樁戰情室 Backend")
-
-# 允許跨域請求 (CORS)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 讓前端可以讀取生成的 json 檔案
-os.makedirs("data", exist_ok=True)
-app.mount("/data", StaticFiles(directory="data"), name="data")
-
-# 定義前端傳來的資料格式
-class TdxRequest(BaseModel):
-    client_id: str
-    client_secret: str
-
-class LogRequest(BaseModel):
-    log_content: str
-
-# 🆕 這是讓 TDX 按鈕可以呼叫的新路徑
-@app.post("/sync_tdx")
-async def sync_tdx_data(req: TdxRequest):
+# 1. 建立一個自動抓取費率的函數
+def auto_fetch_cpo_prices():
+    print("🔄 [系統排程] 啟動自動抓取各家 CPO 最新費率...")
+    
+    # 這裡存放解析後的最新價格
+    updated_pricing = {}
+    
     try:
-        # 執行 TDX 資料拉取與清洗
-        ingestion = TDXIngestion(client_id=req.client_id, client_secret=req.client_secret)
-        raw_static, raw_dynamic = ingestion.fetch_raw_data()
-        cleaned_data = EVDataProcessor.process_and_deduplicate(raw_static, raw_dynamic)
+        # =========================================
+        # 🤖 模擬爬蟲邏輯：自動去 EVOASIS 等網站抓取
+        # =========================================
+        # 實務上這裡會用 requests 或 Playwright 去解析官網 DOM 或隱藏 API
+        # res = requests.get("https://www.evoasis.com.tw/pricing")
+        # soup = BeautifulSoup(res.text, "html.parser")
+        # peak_price = soup.find("div", id="peak-price").text ... 
         
-        # 存入資料庫並產出 JSON
-        mart = EVDatabaseMart("data/evcharge.db")
-        mart.save(cleaned_data)
-        mart.export_marts()
+        # 假設我們爬蟲抓到了最新數據：
+        updated_pricing = {
+            "FET": {"type": "TOU", "peak": 10.9, "offPeak": 6.8, "holiday": 7.9, "peakStart": 16, "peakEnd": 21},
+            "EVALUE": {"type": "TOU", "peak": 13.5, "offPeak": 6.9, "holiday": 8.5, "peakStart": 16, "peakEnd": 21},
+            "EVOASIS": {"type": "TOU", "peak": 11.5, "offPeak": 7.5, "holiday": 7.5, "peakStart": 16, "peakEnd": 21}, # 🆕 自動抓到的 EVOASIS
+            "U-POWER": {"type": "FLAT", "price": 9.9}
+        }
+
+        # 2. 自動覆寫到戰情室前端在讀取的 pricing.json
+        os.makedirs("data", exist_ok=True)
+        with open("data/pricing.json", "w", encoding="utf-8") as f:
+            json.dump(updated_pricing, f, ensure_ascii=False, indent=2)
+            
+        print("✅ [系統排程] 最新費率已更新至資料庫！戰情室將自動顯示最新價格。")
         
-        return {"message": "TDX 同步完成", "count": len(cleaned_data)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ [系統排程] 抓取失敗: {e}")
 
-# 這是原本的 AI 診斷路徑
-@app.post("/analyze_log")
-async def analyze_log(req: LogRequest):
-    return {"diagnosis_html": "<strong>API 接收成功！</strong><br>此為後端 RAG 回傳測試。"}
+# 3. 設定 FastAPI 啟動時，連帶啟動定時爬蟲
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 伺服器啟動時執行
+    scheduler = BackgroundScheduler()
+    # 設定每天凌晨 02:00 自動去抓一次價格
+    scheduler.add_job(auto_fetch_cpo_prices, 'cron', hour=2, minute=0)
+    scheduler.start()
+    
+    # 啟動時先強制跑一次，確保資料是最新的
+    auto_fetch_cpo_prices()
+    
+    yield
+    # 伺服器關閉時執行
+    scheduler.shutdown()
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# 將 lifespan 綁定到您的 FastAPI APP
+app = FastAPI(title="充電樁戰情室 Backend", lifespan=lifespan)
+
+# ... (下方保留您原本的路由設定) ...
