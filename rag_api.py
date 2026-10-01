@@ -9,7 +9,7 @@ from datetime import datetime
 
 app = FastAPI(title="充電樁戰情室 Backend (PlugShare 企業版)")
 
-# 允許跨域請求，讓您的 index.html 可以呼叫 API
+# 允許跨域請求
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 掛載 data 資料夾，讓前端可以讀取 stations_live.json
+# 掛載 data 資料夾
 os.makedirs("data", exist_ok=True)
 app.mount("/data", StaticFiles(directory="data"), name="data")
 
@@ -33,7 +33,7 @@ def standardize_cpo_name(raw_name):
     if "FET" in name or "遠傳" in name: return "FET"
     return raw_name
 
-# 全新 PlugShare 抓取引擎
+# 🔌 全新 PlugShare 抓取引擎
 @app.post("/sync_plugshare")
 async def sync_plugshare():
     url = "https://api.plugshare.com/v3/locations/region"
@@ -69,7 +69,6 @@ async def sync_plugshare():
             is_charging = False
             is_faulted = False
             
-            # 解析槍數、功率與狀態
             for st in loc.get("stations", []):
                 for out in st.get("outlets", []):
                     total_plugs += 1
@@ -77,13 +76,11 @@ async def sync_plugshare():
                     if kw is not None and kw > max_kw:
                         max_kw = kw
                         
-                    # PlugShare 狀態碼: 1=可用, 2=使用中, 3=異常/離線
                     status_code = out.get("status")
                     if status_code == 1: is_available = True
                     elif status_code == 2: is_charging = True
                     elif status_code == 3: is_faulted = True
             
-            # 決定該站點在地圖上的最終顯示狀態
             if is_faulted and not is_available and not is_charging:
                 final_status = "Faulted"
             elif is_available:
@@ -105,7 +102,6 @@ async def sync_plugshare():
                 "updated_at": datetime.now().isoformat()
             })
         
-        # 寫入戰情室資料庫
         with open("data/stations_live.json", "w", encoding="utf-8") as f:
             json.dump(clean_dataset, f, ensure_ascii=False, indent=2)
             
@@ -114,7 +110,6 @@ async def sync_plugshare():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 假資料 Mock API：AI OCPP Log 診斷 (避免前端點擊報錯)
 class LogData(BaseModel):
     log_content: str
 
