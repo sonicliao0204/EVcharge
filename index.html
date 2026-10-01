@@ -201,7 +201,14 @@
                         <thead>
                             <tr>
                                 <th class="time-col">時間</th>
-                                <th>遠傳</th><th>EVALUE</th><th>iCharging</th><th>TAIL</th><th>U-POWER</th><th>YES!來電</th>
+                                <th>遠傳</th>
+                                <th>EVALUE</th>
+                                <!-- 🆕 這裡加入 EVOASIS 標題 -->
+                                <th style="color:#10b981;">EVOASIS</th>
+                                <th>iCharging</th>
+                                <th>TAIL</th>
+                                <th>U-POWER</th>
+                                <th>YES!來電</th>
                                 <th>當前優劣</th>
                                 <th class="ai-suggest-col" style="color: #ca8a04;">🤖 AI 建議定價 (遠傳)</th>
                             </tr>
@@ -585,9 +592,11 @@
 
         function setupPricing(data) { cpoPricingData = data; buildRateTabs(); }
         function fallbackPricing() {
+            // 🆕 備援機制：加入預設 EVOASIS，避免後端掛掉時前端抓不到資料
             cpoPricingData = {
                 'FET': {'type': 'TOU', 'peak': 10.9, 'offPeak': 6.8, 'holiday': 7.9, 'peakStart': 16, 'peakEnd': 21},
                 'EVALUE': {'type': 'TOU', 'peak': 13.5, 'offPeak': 6.9, 'holiday': 8.5, 'peakStart': 16, 'peakEnd': 21},
+                'EVOASIS': {'type': 'TOU', 'peak': 11.5, 'offPeak': 7.5, 'holiday': 7.5, 'peakStart': 16, 'peakEnd': 21},
                 'iCharging': {'type': 'TOU', 'peak': 12.0, 'offPeak': 6.5, 'holiday': 6.5, 'peakStart': 18, 'peakEnd': 21},
                 'TAIL': {'type': 'TOU', 'peak': 11.9, 'offPeak': 8.9, 'holiday': 8.9, 'peakStart': 16, 'peakEnd': 21},
                 'U-POWER': {'type': 'FLAT', 'price': 9.9},
@@ -617,7 +626,8 @@
             document.getElementById('btn-weekday').className = 'nav-btn ' + (!isWeekend?'active':'');
             document.getElementById('btn-weekend').className = 'nav-btn ' + (isWeekend?'active':'');
             
-            const cposForCompare = ['FET', 'EVALUE', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
+            // 🆕 JavaScript 陣列：加入 EVOASIS
+            const cposForCompare = ['FET', 'EVALUE', 'EVOASIS', 'iCharging', 'TAIL', 'U-POWER', 'YES'];
             if(Object.keys(cpoPricingData).length === 0) return;
 
             let html = '';
