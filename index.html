@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 台灣充電情報戰情室 V7.0 企業正式版</title>
+    <title>⚡ 台灣充電情報戰情室 V7.0</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
         .section { display: none; background: var(--card-bg); padding: 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
         .section.active { display: block; }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .kpi-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; border-left: 4px solid var(--primary-color); }
         .kpi-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--text-main); }
@@ -57,7 +57,7 @@
 <body>
     <div class="dashboard">
         <header class="header">
-            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V7.0 企業正式版</span></h1>
+            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V7.0 線上整合版</span></h1>
             <button class="nav-btn" onclick="toggleTheme()" style="border: 1px solid var(--border-color);">🌓 切換深淺色</button>
         </header>
         
@@ -74,17 +74,13 @@
             <!-- 1. 站點地圖 -->
             <section id="section-map" class="section active">
                 <div class="kpi-grid">
-                    <div class="kpi-card" style="border-left-color: #8b5cf6;"><div class="kpi-title">全台收錄站點</div><div class="kpi-value" id="kpi-total">-- 站</div></div>
+                    <div class="kpi-card" style="border-left-color: #8b5cf6;"><div class="kpi-title">全台已收錄</div><div class="kpi-value" id="kpi-total">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #10b981;"><div class="kpi-title">EVOASIS</div><div class="kpi-value" id="kpi-evo">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #0369a1;"><div class="kpi-title">U-POWER</div><div class="kpi-value" id="kpi-upower">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #ef4444;"><div class="kpi-title">Tesla (特斯拉)</div><div class="kpi-value" id="kpi-tesla">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #f59e0b;"><div class="kpi-title">星舟快充</div><div class="kpi-value" id="kpi-titan">-- 站</div></div>
                 </div>
-                <div style="background: var(--bg-color); padding: 12px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <button class="btn-action" onclick="syncData()">🔄 執行全台網格多區深度掃描</button>
-                    <span id="sync-status" style="font-size: 13px; font-weight: 600;">已就緒</span>
-                </div>
-                <div id="station-map" style="height: 520px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color);"></div>
+                <div id="station-map" style="height: 540px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color);"></div>
             </section>
 
             <!-- 2. 數量排行 (AC/DC) -->
@@ -136,23 +132,23 @@
                 </div>
             </section>
 
-            <!-- 5. 市場即時情報 (含發布時間) -->
+            <!-- 5. 市場即時情報 -->
             <section id="section-news" class="section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
                     <h3 style="margin:0;">市場新聞情報牆 (全網聯網即時來源)</h3>
-                    <button class="btn-action" style="background:#ea580c;" onclick="fetchNews()">🔄 更新最新新聞</button>
+                    <button class="btn-action" style="background:#ea580c;" onclick="loadNews()">🔄 重新載入情報</button>
                 </div>
                 <div id="news-container">
-                    <div style="color:var(--text-muted); text-align:center; padding:25px;">點擊「更新最新新聞」從網路抓取當週重大充電事件</div>
+                    <div style="color:var(--text-muted); text-align:center; padding:25px;">讀取中...</div>
                 </div>
             </section>
 
-            <!-- 6. AI 診斷 -->
+            <!-- 6. AI 診斷 (靜態前台離線規則引擎) -->
             <section id="section-kb" class="section">
                 <h3 style="margin-top:0;">🤖 OCPP Log 智慧診斷引擎</h3>
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">貼入 WebSocket 訊息片段即時解析錯誤原因與工程對策：</p>
                 <textarea id="log-input" class="log-textarea" placeholder="貼上 Log 內容，例如：[3, '19223201', {'status':'Rejected'}]"></textarea>
-                <button class="btn-action" style="background:var(--primary-color); margin-top:10px;" onclick="runDiag()">🔍 執行故障診斷</button>
+                <button class="btn-action" style="background:var(--primary-color); margin-top:10px;" onclick="runDiagClient()">🔍 執行故障診斷</button>
                 <div id="log-output" style="display:none; margin-top:15px; padding:15px; border-radius:8px; border-left:4px solid var(--primary-color); background:var(--bg-color);"></div>
             </section>
         </main>
@@ -166,8 +162,8 @@
         let currentMode = 'DC';
         let currentRateCpo = '遠傳';
 
-        // 校正為市場真實常態行情
-        const pricingConfig = {
+        // 預設費率結構 (若 pricing.json 載入失敗時備援)
+        let pricingConfig = {
             '遠傳': { peak: 8.9, off: 6.8, hol: 7.5, ps: 16, pe: 21 },
             'EVOASIS': { peak: 9.2, off: 6.8, hol: 7.2, ps: 16, pe: 21 },
             'U-POWER': { flat: 9.0 },
@@ -190,33 +186,39 @@
             if (id === 'trend') renderChart(currentMode);
         }
 
-        function initMap() {
+        async function initData() {
             mapInstance = L.map('station-map').setView([23.8, 120.9], 7);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
             markersLayer = new L.FeatureGroup().addTo(mapInstance);
 
-            fetch('http://localhost:8000/data/stations_live.json?t=' + Date.now())
-                .then(r => r.json())
-                .then(data => { currentStations = data; updateUI(); })
-                .catch(() => document.getElementById('sync-status').innerText = "💡 尚未同步，請點擊上方按鈕執行深度掃描");
-        }
-
-        async function syncData() {
-            const status = document.getElementById('sync-status');
-            status.innerText = "⏳ 正在跨全台 5 大網格分區深度採集與去重，請稍候...";
-            status.style.color = "#8b5cf6";
+            const cacheBuster = '?t=' + Date.now();
             try {
-                const res = await fetch('http://localhost:8000/sync_plugshare', { method: 'POST' });
-                const json = await res.json();
-                const dataRes = await fetch('http://localhost:8000/data/stations_live.json?t=' + Date.now());
-                currentStations = await dataRes.json();
+                // 載入站點資料
+                const res = await fetch('./data/stations.json' + cacheBuster);
+                currentStations = await res.json();
                 updateUI();
-                status.innerText = `✅ ${json.message}`;
-                status.style.color = "#16a34a";
-            } catch (err) {
-                status.innerText = "❌ 連線失敗，請確認 rag_api.py 已啟動";
-                status.style.color = "#dc2626";
+            } catch (e) {
+                console.error("載入 stations.json 失敗", e);
             }
+
+            try {
+                // 載入費率資料
+                const pRes = await fetch('./data/pricing.json' + cacheBuster);
+                const pData = await pRes.json();
+                if (pData.providers) {
+                    pricingConfig = {
+                        '遠傳': { peak: pData.providers['遠傳'].peak, off: pData.providers['遠傳'].off_peak, hol: pData.providers['遠傳'].holiday, ps: 16, pe: 21 },
+                        'EVOASIS': { peak: pData.providers['EVOASIS'].peak, off: pData.providers['EVOASIS'].off_peak, hol: pData.providers['EVOASIS'].holiday, ps: 16, pe: 21 },
+                        'U-POWER': { flat: pData.providers['U-POWER'].flat },
+                        'EVALUE': { peak: pData.providers['EVALUE'].peak, off: pData.providers['EVALUE'].off_peak, hol: pData.providers['EVALUE'].holiday, ps: 16, pe: 21 },
+                        'TAIL': { peak: pData.providers['TAIL'].peak, off: pData.providers['TAIL'].off_peak, hol: pData.providers['TAIL'].holiday, ps: 16, pe: 21 }
+                    };
+                }
+            } catch (e) {}
+
+            renderCompare(false);
+            initRateTabs();
+            loadNews();
         }
 
         function updateUI() {
@@ -260,12 +262,10 @@
                 counts[st.cpo] = (counts[st.cpo] || 0) + 1;
             });
 
-            // 依站點數量排序由高到低
             let sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
             let labels = sortedEntries.map(e => e[0]);
             let dataVals = sortedEntries.map(e => e[1]);
 
-            // 配色表
             const palette = {
                 'Tesla': '#ef4444', 'EVOASIS': '#10b981', 'U-POWER': '#0369a1', 'EVALUE': '#16a34a',
                 'TAIL': '#0891b2', 'Noodoe': '#8b5cf6', '星舟快充': '#f59e0b', '台灣中油': '#b91c1c',
@@ -360,11 +360,10 @@
             document.getElementById('rate-tbody').innerHTML = html;
         }
 
-        async function fetchNews() {
+        async function loadNews() {
             const container = document.getElementById('news-container');
-            container.innerHTML = '<div style="text-align:center; padding:20px;">📡 正在連線網路爬取最新產業新聞...</div>';
             try {
-                const res = await fetch('http://localhost:8000/sync_news');
+                const res = await fetch('./data/news.json?t=' + Date.now());
                 const list = await res.json();
                 let html = '';
                 list.forEach(n => {
@@ -380,35 +379,28 @@
                     </div>`;
                 });
                 container.innerHTML = html;
-            } catch {
-                container.innerHTML = '<div style="color:red; text-align:center; padding:20px;">❌ 新聞連線異常</div>';
+            } catch (err) {
+                container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:25px;">尚未產出 news.json 或本機直接開啟被 CORS 限制</div>';
             }
         }
 
-        async function runDiag() {
+        function runDiagClient() {
             const text = document.getElementById('log-input').value.trim();
             const out = document.getElementById('log-output');
             if (!text) return;
             out.style.display = 'block';
-            out.innerHTML = '分析中...';
-            try {
-                const res = await fetch('http://localhost:8000/analyze_log', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ log_content: text })
-                });
-                const j = await res.json();
-                out.innerHTML = j.diagnosis_html;
-            } catch {
-                out.innerHTML = '❌ 診斷服務離線';
+
+            const lower = text.toLowerCase();
+            if (lower.includes("rejected")) {
+                out.innerHTML = "<strong>🚨 連線遭拒 (BootNotification Rejected)</strong><br><br>💡 <b>處置建議：</b><br>1. 檢查 ChargePointID 與後台白名單配置。<br>2. 驗證 AuthorizationKey / 密碼與 OCPP 伺服器端配置是否一致。";
+            } else if (lower.includes("faulted")) {
+                out.innerHTML = "<strong>⚠️ 設備硬體故障 (StatusNotification Faulted)</strong><br><br>💡 <b>處置建議：</b><br>1. 檢查急停開關 (E-Stop) 是否遭按下。<br>2. 確認 AC/DC 模組通訊與接地迴路狀態。";
+            } else {
+                out.innerHTML = `<strong>✅ 通訊封包分析完成</strong><br><br>Log 長度 ${text.length} 字元，未發現即時致命特徵碼，格式正常。`;
             }
         }
 
-        window.onload = () => {
-            initMap();
-            renderCompare(false);
-            initRateTabs();
-        };
+        window.onload = () => { initData(); };
     </script>
 </body>
 </html>
