@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 台灣充電情報戰情室 V4.0 (快充過濾與真實情報版)</title>
+    <title>⚡ 台灣充電情報戰情室 V5.0 (動態分類與時效情報)</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -41,40 +41,46 @@
 <body>
     <div class="dashboard">
         <header class="header">
-            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V4.0</span></h1>
+            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V5.0</span></h1>
             <button class="nav-btn" onclick="toggleTheme()" style="border:1px solid var(--border-color);">🌓 切換</button>
         </header>
         
         <nav class="main-nav">
             <button class="nav-btn active" onclick="switchTab('map')">🗺️ 站點地圖</button>
-            <button class="nav-btn" onclick="switchTab('trend')">📈 快充站數量排行</button>
-            <button class="nav-btn" onclick="switchTab('news')">📡 情報牆(自動抓網頁)</button>
+            <button class="nav-btn" onclick="switchTab('trend')">📈 數量動態排行</button>
+            <button class="nav-btn" onclick="switchTab('news')">📡 情報牆(含發布時間)</button>
         </nav>
 
         <main>
             <!-- 1. 地圖區塊 -->
             <section id="section-map" class="section active">
                 <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 15px; align-items: center;">
-                    <button class="sync-btn" onclick="syncPlugShare()">🔄 取得真實快充站數據</button>
-                    <span id="sync-status" style="font-size: 14px; font-weight: 600;">過濾慢充雜訊，只呈現真實市場</span>
+                    <button class="sync-btn" onclick="syncPlugShare()">🔄 取得全台快/慢充最新數據</button>
+                    <span id="sync-status" style="font-size: 14px; font-weight: 600;">支援地圖顯示與圖表動態篩選</span>
                 </div>
                 <div id="station-map" style="height: 550px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color); z-index: 1;"></div>
             </section>
 
-            <!-- 2. 圖表區塊 -->
+            <!-- 2. 圖表區塊 (加入 AC/DC 切換) -->
             <section id="section-trend" class="section">
-                <h3 style="margin-top:0;">全台快充站即時排行 (排除慢充雜訊)</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="margin:0;">各家營運商站點數量即時排行</h3>
+                    <div style="display:flex; gap: 5px;">
+                        <button class="nav-btn active" id="btn-dc" onclick="renderChart('DC')" style="min-width:auto; padding:6px 16px; border:1px solid var(--border-color);">⚡ DC 快充 (≥30kW)</button>
+                        <button class="nav-btn" id="btn-ac" onclick="renderChart('AC')" style="min-width:auto; padding:6px 16px; border:1px solid var(--border-color);">🔌 AC 慢充 (&lt;30kW)</button>
+                    </div>
+                </div>
                 <div style="height: 450px;"><canvas id="expansionChart"></canvas></div>
             </section>
 
-            <!-- 3. 情報牆 (串接真實網站) -->
+            <!-- 3. 情報牆 (加入時間戳記) -->
             <section id="section-news" class="section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                    <h3 style="margin:0;">最新充電市場情報 (串連真實新聞)</h3>
-                    <button class="sync-btn" style="background:#ea580c;" onclick="fetchRealNews()">🔄 從網路抓取最新新聞</button>
+                    <h3 style="margin:0;">最新充電市場情報 (含準確發布時間)</h3>
+                    <button class="sync-btn" style="background:#ea580c;" onclick="fetchRealNews()">🔄 擷取本週最新新聞</button>
                 </div>
                 <div id="news-container">
-                    <div style="color:var(--text-muted); text-align:center; padding:20px;">點擊上方按鈕，即可將真實網站新聞倒入情報牆</div>
+                    <div style="color:var(--text-muted); text-align:center; padding:20px;">點擊上方按鈕，擷取市場最新動態</div>
                 </div>
             </section>
         </main>
@@ -85,11 +91,12 @@
     <script>
         let mapInstance = null, markersLayer = null, chartInstance = null;
         let currentStations = [];
+        let currentChartMode = 'DC';
 
         function toggleTheme() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            if(chartInstance) updateRealChart();
+            renderChart(currentChartMode); // 切換主題時重新渲染圖表
         }
 
         function switchTab(tabId) {
@@ -98,6 +105,7 @@
             event.target.classList.add('active');
             document.getElementById('section-' + tabId).classList.add('active');
             if(tabId === 'map' && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 100);
+            if(tabId === 'trend') renderChart(currentChartMode);
         }
 
         function initMap() {
@@ -108,14 +116,14 @@
             const cacheBuster = '?t=' + new Date().getTime();
             fetch('http://localhost:8000/data/stations_live.json' + cacheBuster)
                 .then(res => res.json())
-                .then(data => { currentStations = data; renderData(); })
-                .catch(e => console.log("等待手動同步"));
+                .then(data => { currentStations = data; renderMap(); renderChart('DC'); })
+                .catch(e => console.log("等待同步"));
         }
 
         // --- 同步 PlugShare ---
         async function syncPlugShare() {
             const status = document.getElementById('sync-status');
-            status.innerText = "📡 正在過濾抓取中...";
+            status.innerText = "📡 正在抓取全台資料 (含 AC/DC)...";
             try {
                 const res = await fetch('http://localhost:8000/sync_plugshare', { method: 'POST' });
                 const result = await res.json();
@@ -124,7 +132,8 @@
                 const dataRes = await fetch('http://localhost:8000/data/stations_live.json' + cacheBuster);
                 currentStations = await dataRes.json();
                 
-                renderData();
+                renderMap();
+                renderChart(currentChartMode); // 自動更新圖表
                 status.innerText = `✅ ${result.message} (共 ${result.count} 站)`;
                 status.style.color = "#16a34a";
             } catch (err) {
@@ -132,10 +141,64 @@
             }
         }
 
-        // --- 抓取真實新聞 ---
+        // --- 渲染地圖 ---
+        function renderMap() {
+            markersLayer.clearLayers();
+            currentStations.forEach(st => {
+                let color = '#64748b';
+                if(st.cpo === 'Tesla') color = '#ef4444';
+                else if(st.cpo === 'EVOASIS') color = '#10b981';
+                else if(st.cpo === 'U-POWER') color = '#0369a1';
+
+                L.circleMarker([st.lat, st.lng], { radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.9 })
+                    .bindPopup(`<b>${st.name}</b><br>營運商: ${st.cpo}<br>最高功率: ${st.total_kw} kW`)
+                    .addTo(markersLayer);
+            });
+        }
+
+        // --- 動態渲染圖表 (AC/DC 過濾) ---
+        function renderChart(type) {
+            currentChartMode = type;
+            document.getElementById('btn-dc').classList.remove('active');
+            document.getElementById('btn-ac').classList.remove('active');
+            if(type === 'DC') document.getElementById('btn-dc').classList.add('active');
+            else document.getElementById('btn-ac').classList.add('active');
+            
+            let cpoCounts = { 'Tesla': 0, 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'Noodoe': 0, 'TAIL': 0, 'iCharging': 0, '其他': 0 };
+            
+            currentStations.forEach(st => {
+                let isDC = st.total_kw >= 30; // 30kW 以上視為快充
+                
+                if (type === 'DC' && !isDC) return; // 看快充時，排除慢充
+                if (type === 'AC' && isDC) return;  // 看慢充時，排除快充
+                
+                if (cpoCounts[st.cpo] !== undefined) cpoCounts[st.cpo]++;
+                else cpoCounts['其他']++;
+            });
+
+            const ctx = document.getElementById('expansionChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            Chart.defaults.color = document.documentElement.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b';
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Tesla', 'EVOASIS', 'U-POWER', 'EVALUE', 'Noodoe', 'TAIL', 'iCharging', '其他'],
+                    datasets: [{
+                        label: type === 'DC' ? '全台 DC 快充站市佔分佈 (≥30kW)' : '全台 AC 慢充站市佔分佈 (<30kW)',
+                        data: [cpoCounts['Tesla'], cpoCounts['EVOASIS'], cpoCounts['U-POWER'], cpoCounts['EVALUE'], cpoCounts['Noodoe'], cpoCounts['TAIL'], cpoCounts['iCharging'], cpoCounts['其他']],
+                        backgroundColor: ['#ef4444', '#10b981', '#0369a1', '#16a34a', '#8b5cf6', '#0891b2', '#ea580c', '#64748b'],
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- 抓取真實新聞 (含時間) ---
         async function fetchRealNews() {
             const container = document.getElementById('news-container');
-            container.innerHTML = '<div style="text-align:center; padding:20px;">📡 正在連線至新聞網站擷取資料...</div>';
+            container.innerHTML = '<div style="text-align:center; padding:20px;">📡 正在連線至新聞伺服器...</div>';
             
             try {
                 const res = await fetch('http://localhost:8000/sync_news');
@@ -143,7 +206,6 @@
                 
                 let html = '';
                 newsList.forEach(news => {
-                    // 針對不同 CPO 給予不同顏色
                     let color = '#64748b';
                     if(news.cpo === 'EVOASIS') color = '#10b981';
                     else if(news.cpo === 'U-POWER') color = '#0369a1';
@@ -154,56 +216,17 @@
                         <div class="news-cpo" style="color:${color}; border-color:${color};">${news.cpo}</div>
                         <div style="flex-grow:1;">
                             <a href="${news.url}" target="_blank" class="news-link">${news.title}</a>
+                            <div style="color:var(--text-muted); font-size:12px; margin-top:6px; font-weight:600;">
+                                🕒 發布時間：${news.date}
+                            </div>
                         </div>
                         <div style="font-size:18px;">🔗</div>
                     </div>`;
                 });
                 container.innerHTML = html;
             } catch (err) {
-                container.innerHTML = '<div style="color:red; text-align:center; padding:20px;">❌ 無法連線新聞伺服器</div>';
+                container.innerHTML = '<div style="color:red; text-align:center; padding:20px;">❌ 無法連線新聞伺服器，請確認後端已開啟</div>';
             }
-        }
-
-        function renderData() {
-            markersLayer.clearLayers();
-            let cpoCounts = { 'Tesla': 0, 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'iCharging': 0, '其他': 0 };
-            
-            currentStations.forEach(st => {
-                let color = '#64748b';
-                if(st.cpo === 'Tesla') color = '#ef4444';
-                else if(st.cpo === 'EVOASIS') color = '#10b981';
-                else if(st.cpo === 'U-POWER') color = '#0369a1';
-
-                L.circleMarker([st.lat, st.lng], { radius: 6, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.9 })
-                    .bindPopup(`<b>${st.name}</b><br>營運商: ${st.cpo}<br>最高功率: ${st.total_kw} kW`)
-                    .addTo(markersLayer);
-                
-                if (cpoCounts[st.cpo] !== undefined) cpoCounts[st.cpo]++;
-                else cpoCounts['其他']++;
-            });
-
-            updateRealChart(cpoCounts);
-        }
-
-        function updateRealChart(cpoCounts) {
-            if(!cpoCounts) return;
-            const ctx = document.getElementById('expansionChart').getContext('2d');
-            if(chartInstance) chartInstance.destroy();
-            Chart.defaults.color = document.documentElement.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b';
-            
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Tesla', 'EVOASIS', 'U-POWER', 'EVALUE', 'TAIL', 'iCharging', '其他'],
-                    datasets: [{
-                        label: '全台快充站市佔分佈 (排除 30kW 以下慢充)',
-                        data: [cpoCounts['Tesla'], cpoCounts['EVOASIS'], cpoCounts['U-POWER'], cpoCounts['EVALUE'], cpoCounts['TAIL'], cpoCounts['iCharging'], cpoCounts['其他']],
-                        backgroundColor: ['#ef4444', '#10b981', '#0369a1', '#16a34a', '#0891b2', '#ea580c', '#64748b'],
-                        borderRadius: 6
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
         }
 
         window.onload = () => { initMap(); };
