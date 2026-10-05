@@ -1,1 +1,10 @@
-
+{
+  "updated_at": "2026-10-05T00:00:00",
+  "providers": {
+    "遠傳": { "peak": 8.9, "off_peak": 6.8, "holiday": 7.5, "peak_start": 16, "peak_end": 21 },
+    "EVOASIS": { "peak": 9.2, "off_peak": 6.8, "holiday": 7.2, "peak_start": 16, "peak_end": 21 },
+    "U-POWER": { "flat": 9.0 },
+    "EVALUE": { "peak": 9.8, "off_peak": 7.5, "holiday": 8.0, "peak_start": 16, "peak_end": 21 },
+    "TAIL": { "peak": 9.9, "off_peak": 7.9, "holiday": 8.2, "peak_start": 16, "peak_end": 21 }
+  }
+}
