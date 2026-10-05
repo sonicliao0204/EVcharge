@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="台灣充電情報戰情室 V3.0 - PlugShare 企業版">
-    <title>⚡ 台灣充電情報戰情室 V3.0 企業版</title>
+    <meta name="description" content="台灣充電情報戰情室 V3.1 - PlugShare 完整企業版">
+    <title>⚡ 台灣充電情報戰情室 V3.1 企業版</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,11 +26,13 @@
 
         body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
         .dashboard { width: 100%; max-width: 1200px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); flex-wrap: wrap; gap: 15px;}
         .header h1 { margin: 0; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+        
         .main-nav { display: flex; background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px; border-radius: 16px; gap: 6px; margin-bottom: 25px; flex-wrap: wrap; }
         .nav-btn { min-width: 110px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: transparent; color: var(--text-muted); }
         .nav-btn.active { background: var(--bg-color); color: var(--primary-color); border: 1px solid var(--border-color);}
+        
         .section { display: none; background: var(--card-bg); padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
         .section.active { display: block; }
         
@@ -46,31 +48,43 @@
         .data-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: center; }
         .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid var(--border-color); }
         .data-table th { background: var(--bg-color); font-weight: 700; font-size: 13px; }
+        
+        /* 情報牆樣式 */
+        .news-card { display: flex; align-items: center; gap: 15px; padding: 15px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--card-bg); margin-bottom: 12px;}
+        .news-cpo { width: 100px; text-align: center; padding: 4px 0; border-radius: 6px; font-weight: 700; font-size: 12px; background: var(--bg-color); border: 1px solid var(--border-color);}
+        
+        /* AI 診斷樣式 */
+        .log-textarea { width: 100%; height: 140px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; background: var(--bg-color); color: var(--text-main); }
     </style>
 </head>
 <body>
     <div class="dashboard">
         <header class="header">
-            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V3.0 PlugShare 企業版</span></h1>
-            <button class="nav-btn" onclick="toggleTheme()" style="min-width:auto;">🌓 切換深色</button>
+            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V3.1 PlugShare 完整版</span></h1>
+            <button class="nav-btn" onclick="toggleTheme()" style="min-width:auto; border:1px solid var(--border-color);">🌓 切換深淺色</button>
         </header>
         
+        <!-- 完整的導覽列回歸 -->
         <nav class="main-nav">
-            <button class="nav-btn active" onclick="switchTab('map')">🗺️ 全台站點地圖</button>
-            <button class="nav-btn" onclick="switchTab('trend')">📊 各家數量排行</button>
-            <button class="nav-btn" onclick="switchTab('compare')">🔥 競品定價分析</button>
+            <button class="nav-btn active" onclick="switchTab('map')">🗺️ 站點地圖</button>
+            <button class="nav-btn" onclick="switchTab('trend')">📈 數量與趨勢</button>
+            <button class="nav-btn" onclick="switchTab('news')">📡 情報牆</button>
+            <button class="nav-btn" onclick="switchTab('compare')">🔥 競品定價</button>
+            <button class="nav-btn" onclick="switchTab('rates')">💰 詳細費率</button>
+            <button class="nav-btn" onclick="switchTab('kb')">🛠️ AI 診斷</button>
         </nav>
 
         <main>
-            <!-- 地圖與 KPI 區塊 -->
+            <!-- 1. 地圖與 KPI 區塊 -->
             <section id="section-map" class="section active">
                 <div class="kpi-grid">
-                    <div class="kpi-card"><div class="kpi-title">總收錄站點 (PlugShare)</div><div class="kpi-value" id="kpi-total-stations">-- 站</div><div class="kpi-desc">涵蓋全台各家 CPO</div></div>
-                    <div class="kpi-card" style="border-left-color:#10b981;"><div class="kpi-title">EVOASIS 站點數</div><div class="kpi-value" id="kpi-evo-stations">-- 站</div><div class="kpi-desc">即時數量統計</div></div>
-                    <div class="kpi-card" style="border-left-color:#0369a1;"><div class="kpi-title">U-POWER 站點數</div><div class="kpi-value" id="kpi-u-stations">-- 站</div><div class="kpi-desc">即時數量統計</div></div>
+                    <div class="kpi-card" style="border-left-color:#8b5cf6;"><div class="kpi-title">PlugShare 總收錄</div><div class="kpi-value" id="kpi-total-stations">-- 站</div><div class="kpi-desc">即時數據同步</div></div>
+                    <div class="kpi-card" style="border-left-color:#10b981;"><div class="kpi-title">EVOASIS</div><div class="kpi-value" id="kpi-evo-stations">-- 站</div><div class="kpi-desc">營運中</div></div>
+                    <div class="kpi-card" style="border-left-color:#0369a1;"><div class="kpi-title">U-POWER</div><div class="kpi-value" id="kpi-u-stations">-- 站</div><div class="kpi-desc">營運中</div></div>
+                    <div class="kpi-card" style="border-left-color:#ef4444;"><div class="kpi-title">Tesla (特斯拉)</div><div class="kpi-value" id="kpi-tesla-stations">-- 站</div><div class="kpi-desc">包含超充/目充</div></div>
                 </div>
 
-                <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 15px; align-items: center;">
+                <div style="background: var(--bg-color); padding: 15px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <button class="sync-btn" onclick="syncPlugShare()">🔄 一鍵同步 PlugShare 真實數據</button>
                     <span id="sync-status" style="font-size: 14px; font-weight: 600;"></span>
                 </div>
@@ -81,13 +95,35 @@
                 <div id="station-map" style="height: 550px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color); z-index: 1;"></div>
             </section>
 
-            <!-- 圖表區塊 -->
+            <!-- 2. 圖表區塊 (真實數量) -->
             <section id="section-trend" class="section">
                 <h3 style="margin-top:0;">全台營運商站點數量即時排行</h3>
                 <div style="height: 450px;"><canvas id="expansionChart"></canvas></div>
             </section>
 
-            <!-- 定價區塊 -->
+            <!-- 3. 情報牆 (強勢回歸) -->
+            <section id="section-news" class="section">
+                <h3 style="margin-top:0;">最新充電市場情報</h3>
+                <div id="news-container">
+                    <div class="news-card">
+                        <div class="news-cpo">EVOASIS</div>
+                        <div style="flex-grow:1;"><a href="#" style="color:var(--text-main); font-weight:bold; text-decoration:none;">[新站啟用|優惠] 桃園青埔超級快充站上線，星晴電價6.5元</a></div>
+                        <div style="color:var(--text-muted); font-size:12px;">今日更新</div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-cpo">FET 遠傳</div>
+                        <div style="flex-grow:1;"><a href="#" style="color:var(--text-main); font-weight:bold; text-decoration:none;">[政策] 遠傳電信得標新竹市公有停車場充電樁 BOT 案</a></div>
+                        <div style="color:var(--text-muted); font-size:12px;">2026-10-01</div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-cpo">U-POWER</div>
+                        <div style="flex-grow:1;"><a href="#" style="color:var(--text-main); font-weight:bold; text-decoration:none;">[新站啟用] 慈雲站啟用，提供 360kW 超充</a></div>
+                        <div style="color:var(--text-muted); font-size:12px;">2026-09-25</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. 競品定價分析 -->
             <section id="section-compare" class="section">
                 <h3 style="margin-top:0;">各家營運商尖離峰費率模擬表</h3>
                 <div style="overflow-x: auto;">
@@ -100,6 +136,25 @@
                         <tbody id="compare-tbody"></tbody>
                     </table>
                 </div>
+            </section>
+            
+            <!-- 5. 詳細費率 (強勢回歸) -->
+            <section id="section-rates" class="section">
+                <h3 style="margin-top:0;">本週營運商分時費率矩陣</h3>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead><tr><th>時段</th><th>週一</th><th>週二</th><th>週三</th><th>週四</th><th>週五</th><th>週六</th><th>週日</th></tr></thead>
+                        <tbody id="rate-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- 6. AI 診斷 (強勢回歸) -->
+            <section id="section-kb" class="section">
+                <h3 style="margin-top:0;">🤖 OCPP Log 智慧診斷引擎</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">貼上 WebSocket Log 即可自動比對遠傳技術知識庫。</p>
+                <textarea class="log-textarea" placeholder="貼上 Log，例如: [3, '19223201', {'status':'Rejected'}]"></textarea>
+                <button class="sync-btn" style="margin-top:10px; background:var(--primary-color);">🔍 發送診斷</button>
             </section>
         </main>
     </div>
@@ -121,7 +176,7 @@
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById('section-' + tabId).classList.add('active');
-            if(tabId === 'map') setTimeout(() => mapInstance.invalidateSize(), 100);
+            if(tabId === 'map' && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 100);
         }
 
         function initMap() {
@@ -129,8 +184,8 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
             markersLayer = new L.FeatureGroup().addTo(mapInstance);
             
-            // 啟動時先嘗試載入既有檔案
-            fetch('http://localhost:8000/data/stations_live.json')
+            const cacheBuster = '?t=' + new Date().getTime();
+            fetch('http://localhost:8000/data/stations_live.json' + cacheBuster)
                 .then(res => res.json())
                 .then(data => { currentStations = data; renderData(); })
                 .catch(e => document.getElementById('sync-status').innerText = "💡 請點擊按鈕同步最新資料");
@@ -145,7 +200,8 @@
                 if(!res.ok) throw new Error("伺服器連線失敗");
                 const result = await res.json();
                 
-                const dataRes = await fetch('http://localhost:8000/data/stations_live.json');
+                const cacheBuster = '?t=' + new Date().getTime();
+                const dataRes = await fetch('http://localhost:8000/data/stations_live.json' + cacheBuster);
                 currentStations = await dataRes.json();
                 
                 renderData();
@@ -158,9 +214,9 @@
         }
 
         function renderData() {
-            // 1. 渲染地圖
             markersLayer.clearLayers();
-            let cpoCounts = { 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'iCharging': 0, 'YES': 0, 'FET': 0, '其他': 0 };
+            // 💡 統計變數中加入 Tesla, Noodoe 等
+            let cpoCounts = { 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'Tesla': 0, 'Noodoe': 0, 'YES': 0, 'iCharging': 0, '其他': 0 };
             
             currentStations.forEach(st => {
                 let color = '#64748b', statusText = '⚫ 離線';
@@ -176,12 +232,11 @@
                 else cpoCounts['其他']++;
             });
 
-            // 2. 更新 KPI
             document.getElementById('kpi-total-stations').innerText = currentStations.length + " 站";
             document.getElementById('kpi-evo-stations').innerText = cpoCounts['EVOASIS'] + " 站";
             document.getElementById('kpi-u-stations').innerText = cpoCounts['U-POWER'] + " 站";
+            document.getElementById('kpi-tesla-stations').innerText = cpoCounts['Tesla'] + " 站";
 
-            // 3. 更新圖表
             updateRealChart(cpoCounts);
         }
 
@@ -194,11 +249,12 @@
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['EVOASIS', 'EVALUE', 'U-POWER', 'TAIL', 'YES!來電', 'iCharging', '其他'],
+                    // 💡 圖表將 Tesla 獨立拉出來顯示！
+                    labels: ['Tesla', 'EVOASIS', 'EVALUE', 'U-POWER', 'Noodoe', 'TAIL', 'YES!來電', 'iCharging', '其他'],
                     datasets: [{
                         label: '全台即時營運站點數 (資料來源: PlugShare)',
-                        data: [cpoCounts['EVOASIS'], cpoCounts['EVALUE'], cpoCounts['U-POWER'], cpoCounts['TAIL'], cpoCounts['YES'], cpoCounts['iCharging'], cpoCounts['其他']],
-                        backgroundColor: ['#10b981', '#16a34a', '#0369a1', '#0891b2', '#ca8a04', '#ea580c', '#64748b'],
+                        data: [cpoCounts['Tesla'], cpoCounts['EVOASIS'], cpoCounts['EVALUE'], cpoCounts['U-POWER'], cpoCounts['Noodoe'], cpoCounts['TAIL'], cpoCounts['YES'], cpoCounts['iCharging'], cpoCounts['其他']],
+                        backgroundColor: ['#ef4444', '#10b981', '#16a34a', '#0369a1', '#8b5cf6', '#0891b2', '#ca8a04', '#ea580c', '#64748b'],
                         borderRadius: 6
                     }]
                 },
@@ -211,20 +267,30 @@
             for(let h=0; h<24; h++) {
                 let p_fet = h>=16&&h<=21 ? 10.9 : 6.8;
                 let p_evo = h>=16&&h<=21 ? 11.5 : 7.5;
-                let p_upower = 9.9;
                 let rec = Math.max(p_evo - 0.1, 6.5);
-                
                 html += `<tr>
                     <td style="font-weight:bold;">${String(h).padStart(2,'0')}:00</td>
                     <td>$${p_fet.toFixed(1)}</td><td>$${(p_fet+1).toFixed(1)}</td>
                     <td style="font-weight:bold; color:#10b981;">$${p_evo.toFixed(1)}</td>
-                    <td>$8.9</td><td>$${p_upower.toFixed(1)}</td>
+                    <td>$8.9</td><td>$9.9</td>
                     <td style="background:#fefce8; border-left:2px solid #ca8a04; font-weight:bold; color:#ca8a04;">
                         $${rec.toFixed(1)} (競價建議)
                     </td>
                 </tr>`;
             }
             document.getElementById('compare-tbody').innerHTML = html;
+            
+            let rateHtml = '';
+            for(let h=0; h<24; h++) {
+                rateHtml += `<tr><td style="font-weight:bold;">${String(h).padStart(2,'0')}:00</td>`;
+                for(let d=1; d<=7; d++) {
+                    let price = (h>=16&&h<=21 && d<=5) ? 10.9 : 6.8;
+                    let color = price > 10 ? '#ea580c' : (d>=6 ? '#ca8a04' : '#16a34a');
+                    rateHtml += `<td style="color:${color}; font-weight:600;">$${price.toFixed(1)}</td>`;
+                }
+                rateHtml += `</tr>`;
+            }
+            document.getElementById('rate-tbody').innerHTML = rateHtml;
         }
 
         window.onload = () => { initMap(); renderPricing(); };
