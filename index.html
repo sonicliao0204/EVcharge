@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 台灣充電情報戰情室 V6.0 全功能企業版</title>
+    <title>⚡ 台灣充電情報戰情室 V7.0 企業正式版</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
         .section { display: none; background: var(--card-bg); padding: 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
         .section.active { display: block; }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .kpi-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; border-left: 4px solid var(--primary-color); }
         .kpi-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--text-main); }
@@ -57,7 +57,7 @@
 <body>
     <div class="dashboard">
         <header class="header">
-            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V6.0 企業整合版</span></h1>
+            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V7.0 企業正式版</span></h1>
             <button class="nav-btn" onclick="toggleTheme()" style="border: 1px solid var(--border-color);">🌓 切換深淺色</button>
         </header>
         
@@ -74,10 +74,11 @@
             <!-- 1. 站點地圖 -->
             <section id="section-map" class="section active">
                 <div class="kpi-grid">
-                    <div class="kpi-card" style="border-left-color: #8b5cf6;"><div class="kpi-title">全台已收錄站點</div><div class="kpi-value" id="kpi-total">-- 站</div></div>
+                    <div class="kpi-card" style="border-left-color: #8b5cf6;"><div class="kpi-title">全台收錄站點</div><div class="kpi-value" id="kpi-total">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #10b981;"><div class="kpi-title">EVOASIS</div><div class="kpi-value" id="kpi-evo">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #0369a1;"><div class="kpi-title">U-POWER</div><div class="kpi-value" id="kpi-upower">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #ef4444;"><div class="kpi-title">Tesla (特斯拉)</div><div class="kpi-value" id="kpi-tesla">-- 站</div></div>
+                    <div class="kpi-card" style="border-left-color: #f59e0b;"><div class="kpi-title">星舟快充</div><div class="kpi-value" id="kpi-titan">-- 站</div></div>
                 </div>
                 <div style="background: var(--bg-color); padding: 12px; border-radius: var(--radius-md); border: 1px dashed var(--border-color); margin-bottom: 15px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                     <button class="btn-action" onclick="syncData()">🔄 執行全台網格多區深度掃描</button>
@@ -101,7 +102,7 @@
             <!-- 3. 競品定價分析 -->
             <section id="section-compare" class="section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0;">各大 CPO 尖離峰費率競價模型</h3>
+                    <h3 style="margin:0;">各大 CPO 尖離峰費率競價模型 (依市場基準校正)</h3>
                     <div style="display:flex; gap:6px;">
                         <button class="nav-btn active" id="btn-weekday" onclick="renderCompare(false)" style="border:1px solid var(--border-color);">工作日</button>
                         <button class="nav-btn" id="btn-weekend" onclick="renderCompare(true)" style="border:1px solid var(--border-color);">週末假日</button>
@@ -111,7 +112,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>時段</th><th>遠傳</th><th>EVALUE</th><th style="color:#10b981;">EVOASIS</th><th>TAIL</th><th>U-POWER</th><th>定價優劣</th><th style="color:#ca8a04;">🤖 AI 建議策略</th>
+                                <th>時段</th><th>遠傳</th><th>EVOASIS</th><th>U-POWER</th><th>EVALUE</th><th>TAIL</th><th>定價優劣</th><th style="color:#ca8a04;">🤖 AI 建議策略</th>
                             </tr>
                         </thead>
                         <tbody id="compare-tbody"></tbody>
@@ -123,7 +124,7 @@
             <section id="section-rates" class="section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <h3 style="margin:0;">分時電價週矩陣 (度/元)</h3>
-                    <div id="rate-tabs" style="display:flex; gap:6px;"></div>
+                    <div id="rate-tabs" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
                 </div>
                 <div style="overflow-x:auto;">
                     <table class="data-table">
@@ -165,12 +166,13 @@
         let currentMode = 'DC';
         let currentRateCpo = '遠傳';
 
+        // 校正為市場真實常態行情
         const pricingConfig = {
-            '遠傳': { peak: 10.9, off: 6.8, hol: 7.9, ps: 16, pe: 21 },
-            'EVOASIS': { peak: 11.5, off: 7.5, hol: 7.5, ps: 16, pe: 21 },
-            'EVALUE': { peak: 13.5, off: 6.9, hol: 8.5, ps: 16, pe: 21 },
-            'TAIL': { peak: 11.9, off: 8.9, hol: 8.9, ps: 16, pe: 21 },
-            'U-POWER': { flat: 9.9 }
+            '遠傳': { peak: 8.9, off: 6.8, hol: 7.5, ps: 16, pe: 21 },
+            'EVOASIS': { peak: 9.2, off: 6.8, hol: 7.2, ps: 16, pe: 21 },
+            'U-POWER': { flat: 9.0 },
+            'EVALUE': { peak: 9.8, off: 7.5, hol: 8.0, ps: 16, pe: 21 },
+            'TAIL': { peak: 9.9, off: 7.9, hol: 8.2, ps: 16, pe: 21 }
         };
 
         function toggleTheme() {
@@ -219,7 +221,7 @@
 
         function updateUI() {
             markersLayer.clearLayers();
-            let counts = { 'Tesla': 0, 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'Noodoe': 0, 'iCharging': 0, 'YES': 0, '其他': 0 };
+            let counts = {};
 
             currentStations.forEach(st => {
                 let color = '#64748b';
@@ -227,19 +229,20 @@
                 else if (st.cpo === 'EVOASIS') color = '#10b981';
                 else if (st.cpo === 'U-POWER') color = '#0369a1';
                 else if (st.cpo === 'EVALUE') color = '#16a34a';
+                else if (st.cpo === '星舟快充') color = '#f59e0b';
 
                 L.circleMarker([st.lat, st.lng], { radius: 5, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.85 })
                     .bindPopup(`<b>${st.name}</b><br>品牌: <b>${st.cpo}</b><br>最高功率: ${st.total_kw} kW<br>槍數: ${st.total_plugs}<br>狀態: ${st.status}`)
                     .addTo(markersLayer);
 
-                if (counts[st.cpo] !== undefined) counts[st.cpo]++;
-                else counts['其他']++;
+                counts[st.cpo] = (counts[st.cpo] || 0) + 1;
             });
 
             document.getElementById('kpi-total').innerText = currentStations.length + " 站";
-            document.getElementById('kpi-evo').innerText = counts['EVOASIS'] + " 站";
-            document.getElementById('kpi-upower').innerText = counts['U-POWER'] + " 站";
-            document.getElementById('kpi-tesla').innerText = counts['Tesla'] + " 站";
+            document.getElementById('kpi-evo').innerText = (counts['EVOASIS'] || 0) + " 站";
+            document.getElementById('kpi-upower').innerText = (counts['U-POWER'] || 0) + " 站";
+            document.getElementById('kpi-tesla').innerText = (counts['Tesla'] || 0) + " 站";
+            document.getElementById('kpi-titan').innerText = (counts['星舟快充'] || 0) + " 站";
 
             renderChart(currentMode);
         }
@@ -249,14 +252,27 @@
             document.getElementById('btn-dc').className = 'nav-btn ' + (type === 'DC' ? 'active' : '');
             document.getElementById('btn-ac').className = 'nav-btn ' + (type === 'AC' ? 'active' : '');
 
-            let counts = { 'Tesla': 0, 'EVOASIS': 0, 'U-POWER': 0, 'EVALUE': 0, 'TAIL': 0, 'Noodoe': 0, 'iCharging': 0, 'YES': 0, '其他': 0 };
+            let counts = {};
             currentStations.forEach(st => {
                 let isDC = st.total_kw >= 30;
                 if (type === 'DC' && !isDC) return;
                 if (type === 'AC' && isDC) return;
-                if (counts[st.cpo] !== undefined) counts[st.cpo]++;
-                else counts['其他']++;
+                counts[st.cpo] = (counts[st.cpo] || 0) + 1;
             });
+
+            // 依站點數量排序由高到低
+            let sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            let labels = sortedEntries.map(e => e[0]);
+            let dataVals = sortedEntries.map(e => e[1]);
+
+            // 配色表
+            const palette = {
+                'Tesla': '#ef4444', 'EVOASIS': '#10b981', 'U-POWER': '#0369a1', 'EVALUE': '#16a34a',
+                'TAIL': '#0891b2', 'Noodoe': '#8b5cf6', '星舟快充': '#f59e0b', '台灣中油': '#b91c1c',
+                'iCharging': '#ea580c', 'YES': '#ca8a04', 'FET': '#dc2626', '公有及自設': '#475569',
+                '飯店民宿自備': '#0d9488', '車廠原廠': '#4f46e5', '其他': '#94a3b8'
+            };
+            let colors = labels.map(l => palette[l] || '#94a3b8');
 
             const ctx = document.getElementById('expansionChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
@@ -266,11 +282,11 @@
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Tesla', 'EVOASIS', 'U-POWER', 'EVALUE', 'TAIL', 'Noodoe', 'iCharging', 'YES!來電', '其他'],
+                    labels: labels,
                     datasets: [{
                         label: type === 'DC' ? '全台 DC 快充站市佔 (≥30kW)' : '全台 AC 慢充站市佔 (<30kW)',
-                        data: [counts['Tesla'], counts['EVOASIS'], counts['U-POWER'], counts['EVALUE'], counts['TAIL'], counts['Noodoe'], counts['iCharging'], counts['YES'], counts['其他']],
-                        backgroundColor: ['#ef4444', '#10b981', '#0369a1', '#16a34a', '#0891b2', '#8b5cf6', '#ea580c', '#ca8a04', '#64748b'],
+                        data: dataVals,
+                        backgroundColor: colors,
                         borderRadius: 6
                     }]
                 },
@@ -292,22 +308,22 @@
             let html = '';
             for (let h = 0; h < 24; h++) {
                 let p_fet = getPrice('遠傳', h, isWeekend);
-                let p_eval = getPrice('EVALUE', h, isWeekend);
                 let p_evo = getPrice('EVOASIS', h, isWeekend);
-                let p_tail = getPrice('TAIL', h, isWeekend);
                 let p_up = getPrice('U-POWER', h, isWeekend);
+                let p_eval = getPrice('EVALUE', h, isWeekend);
+                let p_tail = getPrice('TAIL', h, isWeekend);
 
-                let minOther = Math.min(p_eval, p_evo, p_tail, p_up);
+                let minOther = Math.min(p_evo, p_up, p_eval, p_tail);
                 let tag = p_fet < minOther ? '<span style="color:#16a34a;">🏆 領先</span>' : (p_fet === minOther ? '<span>🤝 持平</span>' : '<span style="color:#dc2626;">⚠️ 偏高</span>');
                 let rec = (minOther - 0.1).toFixed(1);
 
                 html += `<tr>
                     <td style="font-weight:bold;">${String(h).padStart(2,'0')}:00</td>
                     <td style="font-weight:bold; color:var(--primary-color);">$${p_fet.toFixed(1)}</td>
-                    <td>$${p_eval.toFixed(1)}</td>
                     <td style="color:#10b981; font-weight:bold;">$${p_evo.toFixed(1)}</td>
+                    <td style="color:#0369a1; font-weight:bold;">$${p_up.toFixed(1)}</td>
+                    <td>$${p_eval.toFixed(1)}</td>
                     <td>$${p_tail.toFixed(1)}</td>
-                    <td>$${p_up.toFixed(1)}</td>
                     <td>${tag}</td>
                     <td style="background:rgba(202,138,4,0.08); color:#ca8a04; font-weight:bold;">$${rec} (攻佔份額)</td>
                 </tr>`;
@@ -336,7 +352,7 @@
                 html += `<tr><td style="font-weight:bold;">${String(h).padStart(2,'0')}:00</td>`;
                 for (let d = 1; d <= 7; d++) {
                     let p = getPrice(currentRateCpo, h, d >= 6);
-                    let color = p > 10 ? '#ea580c' : (d >= 6 ? '#ca8a04' : '#16a34a');
+                    let color = p > 9.0 ? '#ea580c' : (d >= 6 ? '#ca8a04' : '#16a34a');
                     html += `<td style="color:${color}; font-weight:600;">$${p.toFixed(1)}</td>`;
                 }
                 html += `</tr>`;
