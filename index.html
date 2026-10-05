@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚡ 台灣充電情報戰情室 V7.0</title>
+    <title>⚡ 台灣充電情報戰情室 V7.1 企業正式版</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
         .section { display: none; background: var(--card-bg); padding: 22px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
         .section.active { display: block; }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .kpi-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; border-left: 4px solid var(--primary-color); }
         .kpi-title { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--text-main); }
@@ -57,7 +57,7 @@
 <body>
     <div class="dashboard">
         <header class="header">
-            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V7.0 線上整合版</span></h1>
+            <h1>⚡ 台灣充電情報戰情室 <span style="font-size: 12px; background: #8b5cf6; color: white; padding: 3px 8px; border-radius: 12px;">V7.1 企業正式版</span></h1>
             <button class="nav-btn" onclick="toggleTheme()" style="border: 1px solid var(--border-color);">🌓 切換深淺色</button>
         </header>
         
@@ -76,6 +76,8 @@
                 <div class="kpi-grid">
                     <div class="kpi-card" style="border-left-color: #8b5cf6;"><div class="kpi-title">全台已收錄</div><div class="kpi-value" id="kpi-total">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #10b981;"><div class="kpi-title">EVOASIS</div><div class="kpi-value" id="kpi-evo">-- 站</div></div>
+                    <!-- 💡 新增 EVALUE 專屬追蹤區塊 -->
+                    <div class="kpi-card" style="border-left-color: #16a34a;"><div class="kpi-title">EVALUE (華城)</div><div class="kpi-value" id="kpi-evalue">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #0369a1;"><div class="kpi-title">U-POWER</div><div class="kpi-value" id="kpi-upower">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #ef4444;"><div class="kpi-title">Tesla (特斯拉)</div><div class="kpi-value" id="kpi-tesla">-- 站</div></div>
                     <div class="kpi-card" style="border-left-color: #f59e0b;"><div class="kpi-title">星舟快充</div><div class="kpi-value" id="kpi-titan">-- 站</div></div>
@@ -162,7 +164,7 @@
         let currentMode = 'DC';
         let currentRateCpo = '遠傳';
 
-        // 預設費率結構 (若 pricing.json 載入失敗時備援)
+        // 預設費率結構
         let pricingConfig = {
             '遠傳': { peak: 8.9, off: 6.8, hol: 7.5, ps: 16, pe: 21 },
             'EVOASIS': { peak: 9.2, off: 6.8, hol: 7.2, ps: 16, pe: 21 },
@@ -193,7 +195,6 @@
 
             const cacheBuster = '?t=' + Date.now();
             try {
-                // 載入站點資料
                 const res = await fetch('./data/stations.json' + cacheBuster);
                 currentStations = await res.json();
                 updateUI();
@@ -202,7 +203,6 @@
             }
 
             try {
-                // 載入費率資料
                 const pRes = await fetch('./data/pricing.json' + cacheBuster);
                 const pData = await pRes.json();
                 if (pData.providers) {
@@ -242,6 +242,8 @@
 
             document.getElementById('kpi-total').innerText = currentStations.length + " 站";
             document.getElementById('kpi-evo').innerText = (counts['EVOASIS'] || 0) + " 站";
+            // 💡 寫入 EVALUE 真實數據
+            document.getElementById('kpi-evalue').innerText = (counts['EVALUE'] || 0) + " 站";
             document.getElementById('kpi-upower').innerText = (counts['U-POWER'] || 0) + " 站";
             document.getElementById('kpi-tesla').innerText = (counts['Tesla'] || 0) + " 站";
             document.getElementById('kpi-titan').innerText = (counts['星舟快充'] || 0) + " 站";
@@ -322,7 +324,7 @@
                     <td style="font-weight:bold; color:var(--primary-color);">$${p_fet.toFixed(1)}</td>
                     <td style="color:#10b981; font-weight:bold;">$${p_evo.toFixed(1)}</td>
                     <td style="color:#0369a1; font-weight:bold;">$${p_up.toFixed(1)}</td>
-                    <td>$${p_eval.toFixed(1)}</td>
+                    <td style="color:#16a34a; font-weight:bold;">$${p_eval.toFixed(1)}</td>
                     <td>$${p_tail.toFixed(1)}</td>
                     <td>${tag}</td>
                     <td style="background:rgba(202,138,4,0.08); color:#ca8a04; font-weight:bold;">$${rec} (攻佔份額)</td>
@@ -367,7 +369,7 @@
                 const list = await res.json();
                 let html = '';
                 list.forEach(n => {
-                    let col = n.cpo === 'EVOASIS' ? '#10b981' : (n.cpo === 'U-POWER' ? '#0369a1' : (n.cpo === 'Tesla' ? '#ef4444' : '#64748b'));
+                    let col = n.cpo === 'EVOASIS' ? '#10b981' : (n.cpo === 'U-POWER' ? '#0369a1' : (n.cpo === 'Tesla' ? '#ef4444' : (n.cpo === 'EVALUE' ? '#16a34a' : '#64748b')));
                     html += `
                     <div class="news-card">
                         <div class="news-cpo" style="color:${col}; border-color:${col};">${n.cpo}</div>
